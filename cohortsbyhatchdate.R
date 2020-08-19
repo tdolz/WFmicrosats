@@ -84,4 +84,50 @@ ggplot(mtfnew2,aes(x=TL)) +
 
 
 ##Shinnecock!
+shimelt <-filter(allmelt, Bay=="Shinnecock") %>%dplyr::rename(catch.date=Date, TL=value) %>%mutate(source="tows")
+shico <-read.csv(file="shinextracted.csv", header=TRUE)
+shico <-dplyr::select(shico,-Age,-old.pop)%>%mutate(source="cc")
+
+weeks <-dplyr::select(shimelt,catch.date,Week)
+shico <-left_join(shico,weeks)
+shifnew <-full_join(shico, shimelt, by=c("catch.date","TL","Bay","Year","source","Week")) %>% mutate(Year=as.factor(Year),catch.date=as.Date(catch.date))
+
+split <-c(36,	40,	53,	55,	63,	65,	80,	82)
+splits16 <- as.data.frame(split) %>% mutate(Year="2016")
+splits16$catch.date <- as.Date(c("2016-06-17",	"2016-06-24",	"2016-07-01",	"2016-07-08",	"2016-07-13",	"2016-07-21",	"2016-07-28",	"2016-08-04"))
+split <-c(33,	35,	40,	47,	51,	68,	72,	85)
+splits17 <- as.data.frame(split) %>% mutate(Year="2017")
+splits17$catch.date <- as.Date(c("2017-06-02",	"2017-06-09",	"2017-06-14",	"2017-06-22",	"2017-06-28",	"2017-07-05",	"2017-07-13",	"2017-07-19"))
+splits <-bind_rows(splits16,splits17) %>% mutate(Year=as.factor(Year),catch.date=as.Date(catch.date))
+
+shifnew <-full_join(shifnew, splits, by=c("Year","catch.date"))
+shifnew <-unique(shifnew) %>% mutate(day = format(as.Date(catch.date), format="%m/%d")) %>%filter(!is.na(Week))
+
+#both years in same plot
+ggplot(shifnew,aes(x=TL)) + 
+  geom_histogram(data = subset(shifnew,source=="cc"& new.cohort=="1"), fill="#e66101",color="black", position="identity",   show.legend=TRUE)+ 
+  geom_histogram(data = subset(shifnew,source=="cc"& new.cohort=="2"), fill="#018571",color="black",position="identity",   show.legend=TRUE)+
+  geom_histogram(data = subset(shifnew,source=="tows"), fill="#5e3c99",color="#5e3c99",position="identity",   alpha = 0.2, show.legend=TRUE)+
+  geom_vline(aes(xintercept=split), color="black", linetype="dashed", size=0.5) +
+  facet_grid(day~Year,scales="free_y")+
+  theme_classic()+
+  labs(x = "length (mm)",
+       title = "YOY cohorts by length",
+       subtitle = "Shinnecock")
+
+
+#separate plots for each year - Remember to change out year!
+shifnew2 <-filter(shifnew, Year=="2017")
+ggplot(shifnew2,aes(x=TL)) + 
+  geom_histogram(data = subset(shifnew2,source=="cc"& new.cohort=="1"), fill="#e66101",color="black", position="identity",   show.legend=TRUE)+ 
+  geom_histogram(data = subset(shifnew2,source=="cc"& new.cohort=="2"), fill="#018571",color="black",position="identity",   show.legend=TRUE)+
+  geom_histogram(data = subset(shifnew2,source=="tows"), fill="#5e3c99",color="#5e3c99",position="identity",   alpha = 0.2, show.legend=TRUE)+
+  geom_vline(aes(xintercept=split), color="black", linetype="dashed", size=0.5) +
+  facet_wrap(~day,scales="free_y",nrow=6)+
+  theme_classic()+
+  labs(x = "length (mm)",
+       title = "YOY cohorts by length",
+       subtitle = "Shinnecock 2017") 
+
+## Stuff to consider ###
 
