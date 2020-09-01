@@ -214,7 +214,7 @@ meltlocstats %>%
   xlab(' ')+ylab("Nei's Gene Diversity")+theme_cowplot()+guides(fill = FALSE, colour = FALSE) 
 #ggsave('FsLD.png', width = 7, height = 7)
 
-# CALCULATE RAREFIED ALLELIC RICHNESS ----
+######## CALCULATE RAREFIED ALLELIC RICHNESS ----
 # differences in sample size can bias the number of alleles sampled in a population
 # calculate allelic richness corrected for sample size using rarefaction
 
@@ -557,4 +557,27 @@ t.test(nap$IR,mt$IR,var.equal=TRUE)$p.value
 #no significant differences between bays. 
 #hmmm I think there is a more efficient way to code this. 
 
+#### Genetic Distance ####
+
+## Tree's using provesti's distance
+
+#Within Shinnecock
+set.seed(999)
+wf.s %>%
+  genind2genpop(pop = ~Bay/Con/Year) %>%
+  aboot(cutoff = 50, quiet = TRUE, sample = 1000, distance = provesti.dist, missingno="ignore")
+
+#all bays?
+set.seed(999)
+wfpopLD %>%
+  genind2genpop(pop = ~Bay) %>%
+  aboot(cutoff = 50, quiet = TRUE, sample = 1000, distance = provesti.dist, missingno="ignore")
+#This one makes a lot of sense
+
+#all bays?
+set.seed(999)
+wfpopLD %>%
+  genind2genpop(pop = ~Bay/Con/Year) %>%
+  aboot(cutoff = 50, quiet = TRUE, sample = 1000, distance = provesti.dist, missingno="ignore")
+#This one makes a lot of sense
 
