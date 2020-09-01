@@ -581,3 +581,124 @@ wfpopLD %>%
   aboot(cutoff = 50, quiet = TRUE, sample = 1000, distance = provesti.dist, missingno="ignore")
 #This one makes a lot of sense
 
+
+#### Isolation by distance.####
+library(MASS)
+setPop(wfpopLD) <-~Bay
+wfpop.geo <-genind2genpop(wfpop2)
+Dgen <-dist.genpop(wfpop.geo,method=2) #edward's euclidean distance, but other methods are available. like provesti, nei, etc.
+
+#Create a coordinates list:
+coord.dist =matrix(c(41.008611,72.048611,40.791667,72.696111,40.606389,73.876389,40.845278,72.500556),nrow=4,ncol=2,byrow=TRUE)
+rownames(coord.dist) <-c("Nap","Mor","Jam","Shin")
+colnames(coord.dist)<-c("x","y")
+
+#i'm not sure if it's ok to just put in your own euclidean distance matrix like this but it seems to work. #previously i thought you had to attach it to the genpop objecte as $other, maybe as xy coordinates? I am not sure if it understands that it corresponds to population, but let's plot anyway? 
+Dgeo <-dist(coord.dist)
+
+ibd2 <-mantel.randtest(Dgen,Dgeo)
+ibd2
+plot(ibd2)
+
+
+dens <- kde2d(Dgeo,Dgen, n=300)
+myPal <- colorRampPalette(c("white","blue","gold", "orange", "red"))
+plot(Dgeo, Dgen, xlab="distance (KM)", ylim= c(0.1, 0.5),ylab="genetic distance (euclidean)")
+image(dens, col=transp(myPal(300),0.7), add=TRUE)
+abline(lm(Dgen~Dgeo))
+title("Isolation by distance plot")
+#strong looking pattern of IBD. 
+library("car")
+Anova(lm(Dgen~Dgeo))
+
+#try with ggplot
+
+
+##### AMOVA #####
+setPop(wfpopLD) <- ~Bay
+gapless <-missingno(wfpop2) # only works with gapless data. 
+strat.amo <-poppr.amova(gapless,~Bay)
+strat.amo
+
+#randomization test
+library("ade4")
+set.seed(1999)
+stratsig  <- ade4::randtest(strat.amo, nrepet = 999)
+plot(stratsig)
+stratsig
+
+#another AMOVA, this one from pegas. 
+setPop(wfpop2) <- ~Bay #idk how to change it so it doesn't care about Con/Year
+bov_dist  <- dist(wfpop2) # Euclidean distance
+bov_stra  <- strata(wfpop2)
+bov_amova <- pegas::amova(bov_dist ~ Bay, data = bov_stra, nperm = 100)
+bov_amova
+#no statistical difference between bays i think. 
+
+#yet another way to do an amova
+library("vegan")
+set.seed(20151219)
+res <- adonis(bov_dist ~ Bay, data = bov_stra, permutations = 99)
+res2<- adonis(bov_dist ~ Bay/Con/Year, data = bov_stra, permutations = 99)
+
+#let's look at different bays, but 2016 only!
+setPop(wfpop2) <- ~Bay/Year
+wfpop2016 <- popsub(wfpop2, blacklist=c("Shin_1_2017", "Shin_2_2017"))
+bov_stra2016  <- strata(wfpop2016)
+bov_dist2016  <- dist(wfpop2016)
+res3<- adonis(bov_dist2016 ~ Bay, data = bov_stra2016, permutations = 99)
+
+#with gapless datasets
+gapless <- missingno(wfpop2, type="geno", cutoff=0, freq=TRUE)
+setPop(gapless) <- ~Bay/Year
+wfpop2016 <- popsub(gapless, blacklist=c("Shin_1_2017", "Shin_2_2017"))
+bov_stra2016  <- strata(wfpop2016)
+bov_dist2016  <- dist(wfpop2016)
+res3<- adonis(bov_dist2016 ~ Bay, data = bov_stra2016, permutations = 99)
+
+#let's look within Shinnecock Bay
+setPop(wfpop2) <- ~Bay/Con/Year
+wfpopShin <- popsub(wfpop2, blacklist=c("Nap_6_2016", "Mor_6_2016", "Jam_6_2016"))
+bov_straS  <- strata(wfpopShin)
+bov_distS  <- dist(wfpopShin)
+resS<- adonis(bov_distS ~ Con/Year, data = bov_straS, permutations = 99)
+
+
+###### some more stats! #####
+#private alleles
+private_alleles(wfpop2)
+privateAlleles(wf.g2)
+
+#locus table
+locus_table(wfpop2)
+wflt.pair <- seppop(wfpop2) %>% lapply(locus_table) #by bay!
+
+#diversity boot
+mlgtab <-mlg.table(wfpop2)
+divboot <- diversity_boot(mlgtab, n=1000, H=TRUE, G=TRUE, lambda=TRUE, E5=TRUE)
+dci <-diversity_ci(wfpop2, n=10000, ci=95, plot=TRUE, center=TRUE, rarefy=FALSE, raw=TRUE)
+
+#with rarefaction
+
+dci <-diversity_ci(wfpop2, n=10000, ci=95, plot=FALSE, center=TRUE, rarefy=TRUE, raw=TRUE)
+
+
+#other stats
+otherstats<-diff_stats(wfpop2)
+#plot it
+per.locus <- melt(otherstats$per.locus, varnames = c("Locus", "Statistic"))
+stats     <- c("Hs", "Ht", "Gst", "Gprime_st", "D", "D")
+glob      <- data.frame(Statistic = stats, value = otherstats$global)
+ggplot(per.locus, aes(x = Statistic, y = value)) +
+  geom_boxplot() +
+  geom_point() +
+  geom_point(size = rel(3), color = "red", data = glob) +
+  ggtitle("Estimates of population differentiation")
+
+#bootstrap estimates
+set.seed(20151219) 
+bs_reps <- chao_bootstrap(wfpop2, nreps = 100) #100 for now. 
+summarise_bootstrap(bs_reps, Gst_Nei) # change the function you want to use  (eg, D_Jost, Gst_Hedrick or Gst_Nei) 
+
+#rarefaction to standardize diversity estimates
+# i can't find a function to do this, but as I understand it, I should subsample randomly from the existing shinnecock basically. 
