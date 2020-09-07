@@ -22,6 +22,8 @@ library("lattice")
 library("related")
 library("cowplot")
 library('readr')
+library("reshape2")
+library("strataG")
 
 #keeping everything in this folder
 setwd("/Users//tdolan/Documents//R-Github//WFmicrosats")
@@ -50,30 +52,29 @@ wfia.pair <-wfpop2CLEAN %>% clonecorrect(strata= ~Bay) %>% pair.ia(quiet=FALSE)
 #dev.off()
 
 #create a second dataset that removes one loci in the WF27/WF33 pair 
+#also remove WF06 & WF32 due to null alllels, see null_checker script and "microsat record Sept2020.ppt" for details. 
 #go back to wfpop for this. 
 wfpopLD <-genclone2genind(wfpop)
 all_loci <- locNames(wfpopLD)# create vector of all loci
-removeloc <- c("WF27")# create vector containing loci to remove
+removeloc <- c("WF27","WF06","WF32")# create vector containing loci to remove
 keeploc <- setdiff(all_loci, removeloc)# create list of loci to keep
 wfpopLD <- wfpopLD[loc = keeploc]# filter loci in genind object
 length(locNames(wfpopLD))# check number of loci in genind obj
 
-
 #now re-remove the missing data. 
+setPop(wfpop2CLEAN) <-~Bay
 info_table(wfpopLD, plot = TRUE, scaled =FALSE)
 wfpopLD <-wfpopLD %>% missingno("loci", cutoff=0.30) # removes loci where overall missingness > 30%, so WF01
 info_table(wfpopLD, plot = TRUE, scaled =FALSE)
-wfpopLD <- wfpopLD %>% missingno("geno", cutoff=0.20) # remove samples that are > 20% missing
+wfpopLD <- wfpopLD %>% missingno("geno", cutoff=0.25) # remove samples that are > 25% missing
 info_table(wfpopLD, plot = TRUE, scaled =FALSE)
-#ggsave("20percutinfotable20LD.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+#ggsave("25percutinfotable16LD.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
 #dev.off()
-
-
 
 #HWE Heatmap#
 setPop(wfpopLD) <-~Bay
 wfhwe.pop <- seppop(wfpopLD) %>% lapply(hw.test)
-#write.csv(wfhwe.pop, file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/wfhwepop20.csv")
+#write.csv(wfhwe.pop, file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/wfhwepop16.csv")
 (wfhwe.mat <- sapply(wfhwe.pop, "[", i = TRUE, j = 3)) # Take the third column with all rows ---> output this for supplementary tables.
 wfhw.mc <-sapply(wfhwe.pop, "[", i = TRUE, j = 4) #the PR exact based on the Monte carlo test! ----> p.values on the hw.test
 wfhw.mc  # this is just the p values. 
@@ -82,14 +83,14 @@ newmat <- wfhwe.mat
 newmat[newmat > alpha] <- 1 #where the p value on the chi square is greater than 0.05, give it a 1.
 # so pink means zero, which means p < 0.05, which means out of HWE. 
 levelplot(t(newmat),scales=list(x=list(rot=90)))
-#ggsave("HWEtest20.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+#ggsave("HWEtest16.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
 #dev.off()
 
 #Test HWE over Con/Year
 #Test HWE over Year population
 setPop(wfpopLD) <-~Bay/Con/Year
 wfhwe.pop <- seppop(wfpopLD) %>% lapply(hw.test)
-#write.csv(wfhwe.pop, file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/wfhwepop20BAYCONYEAR.csv")
+write.csv(wfhwe.pop, file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/wfhwepop16BAYCONYEAR.csv")
 (wfhwe.mat <- sapply(wfhwe.pop, "[", i = TRUE, j = 3)) # Take the third column with all rows
 wfhw.mc <-sapply(wfhwe.pop, "[", i = TRUE, j = 4) #the PR exact based on the Monte carlo test! 
 wfhw.mc
@@ -125,8 +126,8 @@ wfpopLD
 setPop(wfpopLD) <- ~Bay/Con/Year
 df <-genind2df(wfpopLD, usepop = TRUE, oneColPerAll = TRUE) 
 df$Ind <- rownames(df)
-#df <-df[,c(25,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24)] #reorder so that the first column has to be the sample name. 
-df <-df[,c(24,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)]
+ #reorder so that the first column has to be the sample name. 
+df <-df[,c(34,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33)]
 df[df=="NA"] <- 0 # missing data must be 0
 SampleInfo <- dplyr::select(df, Ind, pop)
 SampleInfo <- separate(SampleInfo, pop, c("Bay","Con","Year"))
@@ -147,6 +148,9 @@ gen_bayconyear <-seppop(wfpopLD)
 
 setPop(wfpopLD)<-~Year
 gen_year <- seppop(wfpopLD)
+
+setPop(wfpopLD)<-~Bay/Year
+gen_bayyear <- seppop(wfpopLD)
 
 gen_grp <-c(gen_oce,gen_bay,gen_con,gen_bayconyear,gen_year)
 gen_grp[["ALL"]] <-wfpopLD
@@ -197,16 +201,33 @@ loc_stats <- left_join(loc_stats, loc_stats_2) %>%
   filter(LOCUS != "mean")
 
 loc_stats[is.na(loc_stats)] <- NA
+#write.csv(loc_stats,file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/loc_stats16.csv")
 
 # write file with genetic diversity stats by locus to file
-write_delim(loc_stats, "results/gendiv.locstats", delim = "\t")
+#write_delim(loc_stats, "results/gendiv.locstats", delim = "\t")
 
-#visualize results as boxplot:
-meltlocstats <- melt(loc_stats, id.vars=c("GRP","LOCUS"), measure.vars = c("EVENNESS","Ho","Hs","Ht","Fis","SHANNON_IDX","STODD_TAYLOR_IDX"))
 
-meltlocstats <-filter(meltlocstats, GRP %in% c("Nap","Mor","Jam","Shin","Mt","ALL"))
+#create different loc stats groups for testing. 
+loc_stats_bay <-filter(loc_stats, GRP %in% c("Nap","Mor","Jam","Shin","Mt"))
+loc_stats_BYC <-filter(loc_stats, GRP %in% c("Nap_6_2016","Mor_6_2016","Jam_6_2016","Shin_1_2016","Shin_2_2016","Mt_2_2015","Mt_1_2015","Mt_2_2016",  
+                                             "Mt_1_2016","Mt_3_2015","Mt_4_2015","Mt_3_2016","Mt_4_2016","Shin_1_2017","Shin_2_2017")) #does not include MT 5 because we don't know what those individuals are. 
+loc_stats_MT <-filter(loc_stats, GRP %in% c("Mt_2", "Mt_1", "Mt_3", "Mt_4")) #does not include MT 5 because we don't know what those individuals are. 
+loc_stats_shin <-filter(loc_stats, GRP %in% c("Shin_1_2016", "Shin_2_2016","Shin_1_2017","Shin_2_2017"))
+loc_stats_16 <-filter(loc_stats, GRP %in% c("Nap_2016","Mor_2016","Shin_2016","Mt_2016","Jam_2016"))
 
-meltlocstats %>%
+#generic melt
+meltlocstats <-pivot_longer(loc_stats,cols = c("N_ALLELES", "SIMPSON_IDX", "EVENNESS","Ho","Hs","Ht","Fis","SHANNON_IDX","STODD_TAYLOR_IDX"),
+                                names_to="variable", values_to="value")
+#bay melt
+meltlocstats_bay <-pivot_longer(loc_stats_bay,cols = c("N_ALLELES", "SIMPSON_IDX", "EVENNESS","Ho","Hs","Ht","Fis","SHANNON_IDX","STODD_TAYLOR_IDX"),
+                                names_to="variable", values_to="value")
+
+
+meltlocstats2 <-filter(meltlocstats, GRP %in% c("Nap","Mor","Jam","Shin","Mt","ALL")) 
+#this is essentially by bay but also includes the "ALL" Group
+
+##### Box and whisker plots for diversity stats #####
+meltlocstats2 %>%
   filter(variable == "Ht") %>%
   #mutate(GRP = fct_rev(as.factor(GRP))) %>%
   ggplot(aes(x=GRP,y=value))+
@@ -215,7 +236,41 @@ meltlocstats %>%
   coord_flip()+ 
   #ylim(0.7,1.0)+
   xlab(' ')+ylab("Nei's Gene Diversity")+theme_cowplot()+guides(fill = FALSE, colour = FALSE) 
-#ggsave('FsLD.png', width = 7, height = 7)
+ggsave('nei.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
+
+meltlocstats2 %>%
+  filter(variable == "Fis") %>%
+  #mutate(GRP = fct_rev(as.factor(GRP))) %>%
+  ggplot(aes(x=GRP,y=value))+
+  #ggplot(aes(x=fct_inorder(GRP),y=value))+
+  geom_boxplot(fill="lightgray")+ 
+  coord_flip()+ 
+  #ylim(0.7,1.0)+
+  xlab(' ')+ylab("FIS")+theme_cowplot()+guides(fill = FALSE, colour = FALSE) 
+ggsave('FIS.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
+
+meltlocstats2 %>%
+  filter(variable == "EVENNESS") %>%
+  #mutate(GRP = fct_rev(as.factor(GRP))) %>%
+  ggplot(aes(x=GRP,y=value))+
+  #ggplot(aes(x=fct_inorder(GRP),y=value))+
+  geom_boxplot(fill="lightgray")+ 
+  coord_flip()+ 
+  #ylim(0.7,1.0)+
+  xlab(' ')+ylab("Evenness")+theme_cowplot()+guides(fill = FALSE, colour = FALSE) 
+ggsave('Evenness.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
+
+meltlocstats2 %>%
+  filter(variable == "SHANNON_IDX") %>%
+  #mutate(GRP = fct_rev(as.factor(GRP))) %>%
+  ggplot(aes(x=GRP,y=value))+
+  #ggplot(aes(x=fct_inorder(GRP),y=value))+
+  geom_boxplot(fill="lightgray")+ 
+  coord_flip()+ 
+  #ylim(0.7,1.0)+
+  xlab(' ')+ylab("Shannon Index")+theme_cowplot()+guides(fill = FALSE, colour = FALSE) 
+ggsave('Shannon_idx.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
+
 
 ######## CALCULATE RAREFIED ALLELIC RICHNESS ----
 # differences in sample size can bias the number of alleles sampled in a population
@@ -248,7 +303,7 @@ df <- as.data.frame(df$Ar) %>%
 
 ar <- left_join(ar, df)
 
-write_delim(ar, "results/rarefied.allelecount", delim = "\t")
+#write_delim(ar, "results/rarefied.allelecount", delim = "\t")
 
 #visualize results as boxplot. 
 library("forcats")
@@ -258,17 +313,18 @@ meltar <- melt(ar, id.vars=c("LOCUS"), measure.vars=c("Mt","Shin","Nap","Mor","J
 #meltar <-filter(meltar, variable != "ALL")
 
 meltar %>%
-  mutate(variable = fct_rev(as.factor(variable))) %>%
+  filter(variable !="ALL")%>%
+  #mutate(variable = fct_rev(as.factor(variable))) %>%
   ggplot(aes(x=variable,y=value))+
   geom_boxplot(fill="lightgray")+ 
   coord_flip()+ 
   xlab(' ')+ylab('rareified allele count')+theme_cowplot()+guides(fill = FALSE, colour = FALSE)
-#ggsave('rareifiedallelesLD.png', width = 7, height = 7)
+#ggsave('rareifiedallelesLD.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
 
 ##Private alleles
 df <-genind2df(wfpopLD, usepop = TRUE, oneColPerAll = TRUE) 
 df$Ind <- rownames(df)
-df <-df[,c(24,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)]
+df <-df[,c(34,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33)]
 df[df=="NA"] <- 0 # missing data must be 0
 wf.g <-df2gtypes(df,ploidy=2)
 
@@ -285,7 +341,7 @@ meltpA %>%
   geom_boxplot(fill="lightgray")+ 
   coord_flip()+ 
   xlab(' ')+ylab('private alleles')+theme_cowplot()+guides(fill = FALSE, colour = FALSE)
-#ggsave('privateallelesLD.png', width = 7, height = 7)
+#ggsave('privateallelesLD.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
 
 library("viridis")
 #heatmap
@@ -296,7 +352,8 @@ ggplot(meltpA, aes(x = LOCUS, y = variable, fill=value)) +
   coord_fixed(ratio = 1) +
   ylab("")+
   #theme_standard() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))  
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+#ggsave('privateallelesLDheat.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
 
 #heatmap of FIS
 meltlocstats %>%
@@ -309,9 +366,7 @@ meltlocstats %>%
   ylab("")+
   #theme_standard() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))  
-#ggsave('fisheatLD.png', width = 10, height = 7)
-
-
+ggsave('Fis.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
 
 # TEST FOR SIGNIFICANT DIFFERENCES
 # need to use Friedman's test for global test and Wilcoxon signed rank for pairwise tests 
@@ -321,17 +376,40 @@ meltlocstats %>%
 #Shannon's way - go to the code she does it a little differently.  
 # importantly she removes rows with NA from the data set, but we don't have any. 
 
+#the different levels we have to work with are:
+    #loc_stats_bay <- bays
+    #loc_stats_BYC <- bay year con
+    #loc_stats_MT <-bay con for mattituck only, no group 5 (unidentified adults)
+    #loc_stats_shin <- bay year con shin
+    #loc_stats_16 <- 2016 YOY at bay level. 
+
+#set level to test for friedmans
+fdata <- loc_stats_shin
 ###Friedman's test for Global heterogeneity
-friedman.test(Hs~GRP | LOCUS, data= loc_stats) #Hs
-friedman.test(EVENNESS~GRP | LOCUS, data= loc_stats) #evenness
-friedman.test(Ht~GRP | LOCUS, data= loc_stats) #Ht
-friedman.test(Fis~GRP | LOCUS, data= loc_stats) #Fis
-friedman.test(SHANNON_IDX~GRP | LOCUS, data= loc_stats) #Ht
-friedman.test(value~variable | LOCUS, data= meltar) #rareified alleles
+friedman.test(Hs~GRP | LOCUS, data= fdata) #Hs
+friedman.test(EVENNESS~GRP | LOCUS, data= fdata) #evenness
+friedman.test(Ht~GRP | LOCUS, data= fdata) #Ht
+friedman.test(Fis~GRP | LOCUS, data= fdata) #Fis
+friedman.test(SHANNON_IDX~GRP | LOCUS, data= fdata) 
 
-##Wilcoxon test
-llocstats <-filter(loc_stats, GRP %in% c("Nap","Mor","Jam","Shin", "Mt"))
+#for rarified alleles, you have to make a new Allelic Richness analysis for each group you are comparing. 
+meltar2 <- pivot_longer(ar, cols=c("Mt","Shin","Nap","Mor","Jam","ALL"),names_to="variable", values_to="value")
+meltar3 <-filter(meltar2, variable != "ALL") #it doenst like it when you exclude the "all" category... 
+friedman.test(value~variable | LOCUS, data= meltar3) #rareified alleles #come back to this one.... 
 
+#You could automate the test result extraction similar to how you did with the lm summary,,, but not right now. 
+
+#######Wilcoxon tests #####
+#tell us which groups are significantly different. 
+# you have to set which level you are comparing. 
+  #the different levels we have to work with are:
+    #loc_stats_bay <- bays
+    #loc_stats_BYC <- bay year con
+    #loc_stats_MT <-bay con for mattituck only, no group 5 (unidentified adults)
+    #loc_stats_shin <- bay year con shin
+    #loc_stats_16 <- 2016 YOY at bay level. 
+
+llocstats <- loc_stats_bay ##CHANGE HERE
 #list of all the different possible pairs
 comp <- as.character(unique(llocstats$GRP))  
 pairs <- expand.grid(comp, comp) %>%
@@ -369,22 +447,35 @@ for(p in 1:n){
 
 results <- results %>%
   dplyr::select(-temp)
-write_delim(results, "results/exphet_est.wilcox")
+#write_delim(results, "results/exphet_est.wilcox")
 
-results <-mutate(results, bonferroni=0.05/(n_distinct(p.value)))
+results <-mutate(results, bonferroni=0.05/10) # number of pairwise comparisons ####CHECK THIS
 results <-mutate(results, significance = ifelse(p.value>=bonferroni,"not significant","significant"))
 
-# plot heatmap of results ====
-ggplot(results, aes(x = pop1, y = pop2, fill = stat)) +
-  geom_tile(color = "black") +
-  geom_text(aes(label = round(stat,2),color=significance)) +
-  scale_fill_viridis(option="D") +
-  coord_fixed(ratio = 1) +
-  theme_cowplot() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
-  ggtitle("Wilcoxon Signed-Rank Test: Shannon Index ")  ### CHANGE THE TITLE
-#ggsave('FIswilcoxLD.png', width = 7, height = 7)  #### CHANGE THE FILE NAME
+#heatmap of results (new way)
+results <- mutate(results, starsig=ifelse(significance=="significant",round(p.value,4),NA),newstat=abs(stat))
+#write.csv(results,file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/wilcox.csv" )
 
+#delete duplicate pairs
+results <-arrange(results, newstat)
+toDelete <- seq(1, nrow(results), 2)
+results2 <- results[ toDelete ,]
+
+#we're not interested in the wilcoxon stat, we're interested in the p value
+results2 %>%
+  ggplot(aes(x = pop1, y = pop2))+
+  geom_tile(aes(fill=newstat), show.legend = TRUE)+
+  #scale_fill_viridis(option="D") +
+  scale_fill_gradient(low = "#034e7b", high = "#f1eef6",
+                      space = "Lab", na.value = "white", guide = "colourbar",
+                      aesthetics = "fill")+
+  #geom_text(aes(label = round(p.value,4),color=significance), size=3)+
+  geom_text(aes(label = starsig), color="black", size=3)+
+  xlab("")+ylab("")+
+  theme(axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
+
+#though I don't think we need this heatmap, I think we do letter groups on the bar charts? Idk how you would do this. 
+#you could say groups with different letters are in different groups. 
 
 ##Wilcoxon test for rarified alleles##
 meltarr <-filter(meltar, variable %in% c("Nap","Mor","Jam","Shin", "Mt"))
