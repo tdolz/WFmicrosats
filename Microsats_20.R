@@ -227,49 +227,55 @@ meltlocstats2 <-filter(meltlocstats, GRP %in% c("Nap","Mor","Jam","Shin","Mt","A
 #this is essentially by bay but also includes the "ALL" Group
 
 ##### Box and whisker plots for diversity stats #####
-meltlocstats2 %>%
+drabcolors <-c("#d0d1e6","#a6bddb", "#67a9cf", "#1c9099", "#016450")
+
+meltlocstats_bay %>%
   filter(variable == "Ht") %>%
-  #mutate(GRP = fct_rev(as.factor(GRP))) %>%
-  ggplot(aes(x=GRP,y=value))+
-  #ggplot(aes(x=fct_inorder(GRP),y=value))+
-  geom_boxplot(fill="lightgray")+ 
+  ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
+  geom_boxplot(aes(fill=GRP))+ 
+  scale_fill_manual(name = "Bay",values = drabcolors)+
   coord_flip()+ 
   #ylim(0.7,1.0)+
-  xlab(' ')+ylab("Nei's Gene Diversity")+theme_cowplot()+guides(fill = FALSE, colour = FALSE) 
-ggsave('nei.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
+  xlab(' ')+ylab("Nei's Gene Diversity")+
+  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
+        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
+ggsave('nei_bay.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
 
-meltlocstats2 %>%
+meltlocstats_bay %>%
   filter(variable == "Fis") %>%
-  #mutate(GRP = fct_rev(as.factor(GRP))) %>%
-  ggplot(aes(x=GRP,y=value))+
-  #ggplot(aes(x=fct_inorder(GRP),y=value))+
-  geom_boxplot(fill="lightgray")+ 
+  ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
+  geom_boxplot(aes(fill=GRP))+ 
+  scale_fill_manual(name = "Bay",values = drabcolors)+
   coord_flip()+ 
   #ylim(0.7,1.0)+
-  xlab(' ')+ylab("FIS")+theme_cowplot()+guides(fill = FALSE, colour = FALSE) 
-ggsave('FIS.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
+  xlab(' ')+ylab("Fis")+
+  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
+        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
+ggsave('FIS_bay.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
 
-meltlocstats2 %>%
+meltlocstats_bay %>%
   filter(variable == "EVENNESS") %>%
-  #mutate(GRP = fct_rev(as.factor(GRP))) %>%
-  ggplot(aes(x=GRP,y=value))+
-  #ggplot(aes(x=fct_inorder(GRP),y=value))+
-  geom_boxplot(fill="lightgray")+ 
+  ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
+  geom_boxplot(aes(fill=GRP))+ 
+  scale_fill_manual(name = "Bay",values = drabcolors)+
   coord_flip()+ 
   #ylim(0.7,1.0)+
-  xlab(' ')+ylab("Evenness")+theme_cowplot()+guides(fill = FALSE, colour = FALSE) 
-ggsave('Evenness.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
+  xlab(' ')+ylab("Evenness")+
+  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
+        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
+ggsave('Evenness_bay.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
 
-meltlocstats2 %>%
+meltlocstats_bay %>%
   filter(variable == "SHANNON_IDX") %>%
-  #mutate(GRP = fct_rev(as.factor(GRP))) %>%
-  ggplot(aes(x=GRP,y=value))+
-  #ggplot(aes(x=fct_inorder(GRP),y=value))+
-  geom_boxplot(fill="lightgray")+ 
+  ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
+  geom_boxplot(aes(fill=GRP))+ 
+  scale_fill_manual(name = "Bay",values = drabcolors)+
   coord_flip()+ 
   #ylim(0.7,1.0)+
-  xlab(' ')+ylab("Shannon Index")+theme_cowplot()+guides(fill = FALSE, colour = FALSE) 
-ggsave('Shannon_idx.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
+  xlab(' ')+ylab("Shannon Index")+
+  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
+        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
+ggsave('Shannon_idxbay.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
 
 
 ######## CALCULATE RAREFIED ALLELIC RICHNESS ----
@@ -308,18 +314,23 @@ ar <- left_join(ar, df)
 #visualize results as boxplot. 
 library("forcats")
 library("cowplot")
-meltar <- melt(ar, id.vars=c("LOCUS"), measure.vars=c("Mt","Shin","Nap","Mor","Jam","ALL"))
 
-#meltar <-filter(meltar, variable != "ALL")
+#for rarified alleles, you have to make a new Allelic Richness analysis for each group you are comparing. 
+meltar2 <- pivot_longer(ar, cols=c("Mt","Shin","Nap","Mor","Jam","ALL"),names_to="variable", values_to="value")
+meltar3 <-filter(meltar2, variable != "ALL") #it doenst like it when you exclude the "all" category... 
 
-meltar %>%
-  filter(variable !="ALL")%>%
-  #mutate(variable = fct_rev(as.factor(variable))) %>%
-  ggplot(aes(x=variable,y=value))+
-  geom_boxplot(fill="lightgray")+ 
+meltar3 %>%
+  #filter(variable !="ALL")%>%
+  mutate(GRP = as.factor(variable)) %>%
+  ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
+  geom_boxplot(aes(fill=GRP))+ 
+  scale_fill_manual(name = "Bay",values = drabcolors)+
   coord_flip()+ 
-  xlab(' ')+ylab('rareified allele count')+theme_cowplot()+guides(fill = FALSE, colour = FALSE)
-#ggsave('rareifiedallelesLD.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
+  #ylim(0.7,1.0)+
+  xlab(' ')+ylab("Rareified allele count")+
+  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
+        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
+#ggsave('rareifiedallelesLD_bay.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
 
 ##Private alleles
 df <-genind2df(wfpopLD, usepop = TRUE, oneColPerAll = TRUE) 
@@ -333,17 +344,22 @@ pA <-as.data.frame(privateAlleles(wf.g))
 setDT(pA,keep.rownames=TRUE)
 colnames(pA)[1] <- "LOCUS"
 
-meltpA <- melt(pA, id.vars=c("LOCUS"), measure.vars=c("Mt","Shin","Nap","Mor","Jam"))
+meltpA <- pivot_longer(pA, cols=c("Mt","Shin","Nap","Mor","Jam"),names_to="variable", values_to="value")
 
 meltpA %>%
-  mutate(variable = fct_rev(as.factor(variable))) %>%
-  ggplot(aes(x=variable,y=value))+
-  geom_boxplot(fill="lightgray")+ 
+  mutate(GRP = as.factor(variable)) %>%
+  ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
+  geom_boxplot(aes(fill=GRP))+ 
+  scale_fill_manual(name = "Bay",values = drabcolors)+
   coord_flip()+ 
-  xlab(' ')+ylab('private alleles')+theme_cowplot()+guides(fill = FALSE, colour = FALSE)
-#ggsave('privateallelesLD.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
+  #ylim(0.7,1.0)+
+  xlab(' ')+ylab("Private alleles")+
+  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
+        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
+#ggsave('privateallelesLD_bay.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
 
-library("viridis")
+
+##### Heatmaps #####
 #heatmap
 ggplot(meltpA, aes(x = LOCUS, y = variable, fill=value)) +
   geom_tile(color = "black") +
@@ -391,10 +407,6 @@ friedman.test(EVENNESS~GRP | LOCUS, data= fdata) #evenness
 friedman.test(Ht~GRP | LOCUS, data= fdata) #Ht
 friedman.test(Fis~GRP | LOCUS, data= fdata) #Fis
 friedman.test(SHANNON_IDX~GRP | LOCUS, data= fdata) 
-
-#for rarified alleles, you have to make a new Allelic Richness analysis for each group you are comparing. 
-meltar2 <- pivot_longer(ar, cols=c("Mt","Shin","Nap","Mor","Jam","ALL"),names_to="variable", values_to="value")
-meltar3 <-filter(meltar2, variable != "ALL") #it doenst like it when you exclude the "all" category... 
 friedman.test(value~variable | LOCUS, data= meltar3) #rareified alleles #come back to this one.... 
 
 #You could automate the test result extraction similar to how you did with the lm summary,,, but not right now. 
@@ -423,8 +435,7 @@ pairs <- expand.grid(comp, comp) %>%
       dplyr::select(-llocstats)})
 
 # empty data frame for results
-results <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), c("pop1", "pop2", "stat", "temp", "p.value"))
-
+results <- setNames(data.frame(matrix(ncol = 6, nrow = 0)), c("pop1", "pop2", "stat", "temp", "p.value", "test"))
 n <- as.numeric(length(pairs))
 
 library("coin")
@@ -442,46 +453,113 @@ for(p in 1:n){
   df <- data.frame("pop1" = pair[1], 
                    "pop2" = pair[2], 
                    "stat" = as.numeric(wilcox@statistic@teststatistic), 
-                   "p-value" = as.numeric(pvalue(wilcox)))
+                   "p-value" = as.numeric(pvalue(wilcox)),
+                   "test" = "Shannon")  ### change this one. 
   results <- bind_rows(results, df)}
 
-results <- results %>%
-  dplyr::select(-temp)
-#write_delim(results, "results/exphet_est.wilcox")
+#now change test and re_run above. 
+results_nei <-results
+results_fis <-results
+results_even <-results
+results_shannon <-results
 
+results <-bind_rows(results_nei, results_fis, results_even, results_shannon)
+results <- results %>% dplyr::select(-temp)
 results <-mutate(results, bonferroni=0.05/10) # number of pairwise comparisons ####CHECK THIS
 results <-mutate(results, significance = ifelse(p.value>=bonferroni,"not significant","significant"))
 
+write.csv(results,file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/wilcox.csv" )
+
 #heatmap of results (new way)
-results <- mutate(results, starsig=ifelse(significance=="significant",round(p.value,4),NA),newstat=abs(stat))
-#write.csv(results,file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/wilcox.csv" )
+results <- mutate(results, starsig=ifelse(significance=="significant",round(p.value,4),NA),test.statistic=abs(stat))
+results<-mutate(results, p_value = cut(p.value, breaks=c(0,0.005, 0.01,0.05,0.1,0.5,1)))
+cols <- c("(0,0.005]"="#034e7b", "(0.005,0.01]" = "#045a8d", "(0.01,0.05]" = "#2b8cbe", "(0.05,0.1]" = "#74a9cf", "(0.1,0.5]"  = "#a6bddb", "(0.5,1]"="#d0d1e6")
 
-#delete duplicate pairs
-results <-arrange(results, newstat)
-toDelete <- seq(1, nrow(results), 2)
-results2 <- results[ toDelete ,]
+#NEI Heatmap. 
+#delete duplicate pairs to form the half grid of the heatmap. 
+results_nei <-filter(results, test=="Ht") %>%
+  arrange(test.statistic) %>% unique() %>% 
+  mutate(pair1 = pmin(pop1,pop2), pair2 =pmax(pop1,pop2)) %>% arrange(pair1)
+toDelete <- seq(1, nrow(results_nei), 2)
+results_nei <- results_nei[ toDelete ,]
 
-#we're not interested in the wilcoxon stat, we're interested in the p value
-results2 %>%
-  ggplot(aes(x = pop1, y = pop2))+
-  geom_tile(aes(fill=newstat), show.legend = TRUE)+
-  #scale_fill_viridis(option="D") +
-  scale_fill_gradient(low = "#034e7b", high = "#f1eef6",
-                      space = "Lab", na.value = "white", guide = "colourbar",
-                      aesthetics = "fill")+
-  #geom_text(aes(label = round(p.value,4),color=significance), size=3)+
-  geom_text(aes(label = starsig), color="black", size=3)+
+# Filled by test statistic: NEI - shows graphical options. 
+results_nei %>%
+  ggplot(aes(x = pair1, y = pair2))+
+  #geom_tile(aes(fill=test.statistic), show.legend = TRUE)+ # Filled by test statistic
+  #geom_tile(aes(fill=p.value), show.legend = TRUE)+ #filled  by p.value (gradient)
+  geom_tile(aes(fill=p_value), show.legend = TRUE)+ #filled  by p_value (discrete)
+  #scale_fill_gradient(low ="#023858" , high = "#a6bddb", space = "Lab", na.value = "white", guide = "colourbar", aesthetics = "fill")+ #gradient fill
+  scale_fill_manual(values=cols)+
+  geom_text(aes(label = round(p.value,3),color=significance), size=4)+
+  scale_color_manual(values=c("white","red"), guide=FALSE)+
   xlab("")+ylab("")+
   theme(axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
+ggsave('neiBaytile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
 
-#though I don't think we need this heatmap, I think we do letter groups on the bar charts? Idk how you would do this. 
-#you could say groups with different letters are in different groups. 
+#FIS heatmap
+#delete duplicate pairs to form the half grid of the heatmap. 
+results_Fis <-filter(results, test=="Fis") %>%
+  arrange(test.statistic) %>% unique() %>% 
+  mutate(pair1 = pmin(pop1,pop2), pair2 =pmax(pop1,pop2)) %>% arrange(pair1)
+toDelete <- seq(1, nrow(results_Fis), 2)
+results_Fis <- results_Fis[ toDelete ,]
+
+# Filled by test statistic: FIS
+results_Fis %>%
+  ggplot(aes(x = pair1, y = pair2))+
+  geom_tile(aes(fill=p_value), show.legend = TRUE)+ #filled  by p_value (discrete)
+  scale_fill_manual(values=cols)+
+  geom_text(aes(label = round(p.value,3),color=significance), size=4)+
+  scale_color_manual(values=c("white","red"), guide=FALSE)+
+  xlab("")+ylab("")+
+  theme(axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
+ggsave('FisBaytile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
+
+#EVENNESS heatmap
+#delete duplicate pairs to form the half grid of the heatmap. 
+results_even <-filter(results, test=="EVENNESS") %>%
+  arrange(test.statistic) %>% unique() %>% 
+  mutate(pair1 = pmin(pop1,pop2), pair2 =pmax(pop1,pop2)) %>% arrange(pair1)
+toDelete <- seq(1, nrow(results_even), 2)
+results_even <- results_even[ toDelete ,]
+
+# Filled by test statistic: evenness
+results_even %>%
+  ggplot(aes(x = pair1, y = pair2))+
+  geom_tile(aes(fill=p_value), show.legend = TRUE)+ #filled  by p_value (discrete)
+  scale_fill_manual(values=cols)+
+  geom_text(aes(label = round(p.value,3),color=significance), size=4)+
+  scale_color_manual(values=c("white","red"), guide=FALSE)+
+  xlab("")+ylab("")+
+  theme(axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
+ggsave('evennessBaytile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
+
+#shannons heatmap
+#delete duplicate pairs to form the half grid of the heatmap. 
+results_shannon <-filter(results, test=="Shannon") %>%
+  arrange(test.statistic) %>% unique() %>% 
+  mutate(pair1 = pmin(pop1,pop2), pair2 =pmax(pop1,pop2)) %>% arrange(pair1)
+toDelete <- seq(1, nrow(results_shannon), 2)
+results_shannon <- results_shannon[ toDelete ,]
+
+# Filled by test statistic: evenness
+results_shannon %>%
+  ggplot(aes(x = pair1, y = pair2))+
+  geom_tile(aes(fill=p_value), show.legend = TRUE)+ #filled  by p_value (discrete)
+  scale_fill_manual(values=cols)+
+  geom_text(aes(label = round(p.value,3),color=significance), size=4)+
+  scale_color_manual(values=c("white","red"), guide=FALSE)+
+  xlab("")+ylab("")+
+  theme(axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
+ggsave('shannonBaytile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
+
 
 ##Wilcoxon test for rarified alleles##
-meltarr <-filter(meltar, variable %in% c("Nap","Mor","Jam","Shin", "Mt"))
+
 
 #list of all the different possible pairs
-comp <- as.character(unique(meltarr$variable))  
+comp <- as.character(unique(meltar3$variable))  
 pairs <- expand.grid(comp, comp) %>%
   filter(!Var1 == Var2) %>%
   rownames_to_column("PAIR") %>%
@@ -512,11 +590,11 @@ for(p in 1:n){
                    "pop2" = pair[2], 
                    "stat" = as.numeric(wilcox@statistic@teststatistic), 
                    "p-value" = as.numeric(pvalue(wilcox)))
-  results <- bind_rows(results, df)}
+  results_ar <- bind_rows(results, df)}
 
-results <- results %>%
+results_ar <- results_ar %>%
   dplyr::select(-temp)
-write_delim(results, "results/exphet_est.wilcox")
+
 
 results <-mutate(results, bonferroni=0.05/9)
 results <-mutate(results, significance = ifelse(p.value>=bonferroni,"not significant","significant"))
