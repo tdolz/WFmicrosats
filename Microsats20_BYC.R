@@ -1,11 +1,12 @@
-### Genetic analysis Bays ###
-## created 8-19-2020
+#Microsats_ bayyearcon
+
+### Genetic analysis Mattituck and Shinnecock separately ###
+## created 9-8-2020
 
 ## NOTES ##
-## updated on Sept. 5, 2020, to include all loci but subset as needed. 
 ## for no half 0 genotypes, use the double0 version of the files 
 ## population corrected for new cohort assignment
-## based on the script "skreportdnaJAN_28_2020MATTITUCK.R"
+## based on the script "skreportdnaJAN_28_2020MATTITUCK.R" and "Microsats_20.R"
 ## Only including analysis that is for the publication. No exploratory analysis. 
 
 
@@ -126,7 +127,7 @@ wfpopLD
 setPop(wfpopLD) <- ~Bay/Con/Year
 df <-genind2df(wfpopLD, usepop = TRUE, oneColPerAll = TRUE) 
 df$Ind <- rownames(df)
- #reorder so that the first column has to be the sample name. 
+#reorder so that the first column has to be the sample name. 
 df <-df[,c(34,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33)]
 df[df=="NA"] <- 0 # missing data must be 0
 SampleInfo <- dplyr::select(df, Ind, pop)
@@ -217,7 +218,7 @@ loc_stats_16 <-filter(loc_stats, GRP %in% c("Nap_2016","Mor_2016","Shin_2016","M
 
 #generic melt
 meltlocstats <-pivot_longer(loc_stats,cols = c("N_ALLELES", "SIMPSON_IDX", "EVENNESS","Ho","Hs","Ht","Fis","SHANNON_IDX","STODD_TAYLOR_IDX"),
-                                names_to="variable", values_to="value")
+                            names_to="variable", values_to="value")
 #bay melt
 meltlocstats_bay <-pivot_longer(loc_stats_bay,cols = c("N_ALLELES", "SIMPSON_IDX", "EVENNESS","Ho","Hs","Ht","Fis","SHANNON_IDX","STODD_TAYLOR_IDX"),
                                 names_to="variable", values_to="value")
@@ -393,11 +394,11 @@ ggsave('Fis.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_f
 # importantly she removes rows with NA from the data set, but we don't have any. 
 
 #the different levels we have to work with are:
-    #loc_stats_bay <- bays
-    #loc_stats_BYC <- bay year con
-    #loc_stats_MT <-bay con for mattituck only, no group 5 (unidentified adults)
-    #loc_stats_shin <- bay year con shin
-    #loc_stats_16 <- 2016 YOY at bay level. 
+#loc_stats_bay <- bays
+#loc_stats_BYC <- bay year con
+#loc_stats_MT <-bay con for mattituck only, no group 5 (unidentified adults)
+#loc_stats_shin <- bay year con shin
+#loc_stats_16 <- 2016 YOY at bay level. 
 
 #set level to test for friedmans
 fdata <- loc_stats_shin
@@ -414,12 +415,12 @@ friedman.test(value~variable | LOCUS, data= meltar3) #rareified alleles #come ba
 #######Wilcoxon tests #####
 #tell us which groups are significantly different. 
 # you have to set which level you are comparing. 
-  #the different levels we have to work with are:
-    #loc_stats_bay <- bays
-    #loc_stats_BYC <- bay year con
-    #loc_stats_MT <-bay con for mattituck only, no group 5 (unidentified adults)
-    #loc_stats_shin <- bay year con shin
-    #loc_stats_16 <- 2016 YOY at bay level. 
+#the different levels we have to work with are:
+#loc_stats_bay <- bays
+#loc_stats_BYC <- bay year con
+#loc_stats_MT <-bay con for mattituck only, no group 5 (unidentified adults)
+#loc_stats_shin <- bay year con shin
+#loc_stats_16 <- 2016 YOY at bay level. 
 
 llocstats <- loc_stats_bay ##CHANGE HERE
 #list of all the different possible pairs
@@ -614,266 +615,3 @@ results_ar %>%
 ggsave('rariefied_allelesBaytile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
 
 
-
-
-
-##### FST ######
-
-#Weir and Cockheram FST global & pairwise. - probably your best bet. 
-library("strataG")
-setPop(wfpopLD) <-~Bay/Con
-wf.g2 <-genind2gtypes(wfpopLD)
-#statFst(wf.g)
-popStruct <- popStructTest(wf.g2, stats = c(statFst, statFstPrime), nrep = 1000, quietly = TRUE)
-popStruct
-
-#some custom for mike
-setPop(wfpopLD) <- ~Bay/Con
-
-#explore structure within a bay using strataG
-setPop(wfpopLD) <-~Bay/Con/Year
-wf.s <-popsub(wfpopLD, c("Shin_1_2016","Shin_2_2016","Shin_1_2017", "Shin_2_2017"))
-wf.s2 <- genind2gtypes(wf.s)
-popStruct.S <- popStructTest(wf.s2, stats = c(statFst, statFstPrime), nrep = 1000, quietly = TRUE)
-popStruct.S
-
-bayyrcon <-as.data.frame(popStruct.S$pairwise$pair.mat$Fst)
-write.csv(bayyrcon,file="bayyerfst.csv")
-
-#explore structure within Mattituck
-setPop(wfpopLD) <-~Bay/Con/Year
-wf.M <-popsub(wfpopLD, c("Mt_1_2015","Mt_2_2015","Mt_1_2016", "Mt_2_2016", "Mt_3_2015", "Mt_4_2015", "Mt_5_2015", "Mt_3_2016", "Mt_4_2016", "Mt_5_2016"))
-wf.M2 <- genind2gtypes(wf.M)
-popStruct.M <- popStructTest(wf.M2, stats = c(statFst, statFstPrime), nrep = 1000, quietly = TRUE)
-popStruct.M
-
-
-
-#with the pruned dataset from shin
-popStruct.nosibs <- popStructTest(wfpopLDnosibs, stats = c(statFst, statFstPrime), nrep = 1000, quietly = TRUE)
-popStruct.nosibs
-
-#see previous scripts for other kinds of FST you can calculate
-
-# ultimately, you will need help interpreting these. 
-
-#### Inbreeding - Internal Relatedness ####
-library("Rhh")
-setPop(wfpopLD) <-~Bay
-#wfp <-genind2df(wfpopLD)
-wfp <-genind2df(wfpopLD, usepop = TRUE, oneColPerAll = TRUE) %>% tibble::rownames_to_column("Ind")
-wfp <-mutate_at(wfp,vars(-pop, -Ind),as.numeric)
-wfp[is.na(wfp)] <- 0
-
-rel <- dplyr::select(wfp, -1, -2)
-rel <-ir(rel)
-#rel <-ir(wfp[,-1])
-
-#rel
-rel2 <-as.data.frame(rel)
-names(rel2) <-c("IR")
-rel2 <-cbind(wfp,rel2) 
-rel2 <-dplyr::select(rel2,Ind,pop,IR)
-
-ddply(rel2, ~pop, summarize, meanir=mean(IR))
-
-#violin plot
-p <- ggplot(rel2, aes(x=pop, y=IR)) + 
-  geom_violin(trim=FALSE,fill='#A4A4A4', color="darkred")+
-  stat_summary(fun.data="mean_sdl", geom="pointrange")
-
-#barplot as before
-ggplot(rel2, aes(x=pop,y=IR))+
-  #ggplot(aes(x=fct_inorder(GRP),y=value))+
-  geom_boxplot(fill="lightgray")+ 
-  coord_flip()+ 
-  #ylim(0.7,1.0)+
-  xlab(' ')+ylab("IR")+theme_cowplot()+guides(fill = FALSE, colour = FALSE) 
-#ggsave('IRld.png', width = 7, height = 7)
-
-## test for significant differences in mean IR for each bay-pair, with t test. Print only the p values. 
-jam <-filter(rel2,pop=="Jam")
-shin <-filter(rel2,pop=="Shin")
-nap <-filter(rel2,pop=="Nap")
-mor <-filter(rel2,pop=="Mor")
-mt <-filter(rel2,pop=="Mt")
-
-print("Nap vs. Shin")
-var.test(nap$IR,shin$IR)
-t.test(nap$IR,shin$IR,var.equal=TRUE)$p.value
-print("Nap vs. Mor")
-var.test(nap$IR,mor$IR)
-t.test(nap$IR,mor$IR,var.equal=TRUE)$p.value
-print("Jam vs. Nap")
-var.test(jam$IR,nap$IR)
-t.test(jam$IR,nap$IR,var.equal=TRUE)$p.value
-print("Mor vs. Shin")
-var.test(mor$IR,shin$IR)
-t.test(mor$IR,shin$IR,var.equal=TRUE)$p.value
-print("Jam vs. Shin")
-var.test(jam$IR,shin$IR)
-t.test(jam$IR,shin$IR,var.equal=TRUE)$p.value
-print("Jam vs. Mor")
-var.test(jam$IR,mor$IR)
-t.test(jam$IR,mor$IR,var.equal=TRUE)$p.value
-
-print("Jam vs. Mt")
-var.test(jam$IR,mt$IR)
-t.test(jam$IR,mt$IR,var.equal=TRUE)$p.value
-print("Shin vs. Mt")
-var.test(shin$IR,mt$IR)
-t.test(shin$IR,mt$IR,var.equal=TRUE)$p.value
-print("Mor vs. Mt")
-var.test(mor$IR,mt$IR)
-t.test(mor$IR,mt$IR,var.equal=TRUE)$p.value
-print("Nap vs. Mt")
-var.test(nap$IR,mt$IR)
-t.test(nap$IR,mt$IR,var.equal=TRUE)$p.value
-#no significant differences between bays. 
-#hmmm I think there is a more efficient way to code this. 
-
-#### Genetic Distance ####
-
-## Tree's using provesti's distance
-
-#Within Shinnecock
-set.seed(999)
-wf.s %>%
-  genind2genpop(pop = ~Bay/Con/Year) %>%
-  aboot(cutoff = 50, quiet = TRUE, sample = 1000, distance = provesti.dist, missingno="ignore")
-
-#all bays?
-set.seed(999)
-wfpopLD %>%
-  genind2genpop(pop = ~Bay) %>%
-  aboot(cutoff = 50, quiet = TRUE, sample = 1000, distance = provesti.dist, missingno="ignore")
-#This one makes a lot of sense
-
-#all bays?
-set.seed(999)
-wfpopLD %>%
-  genind2genpop(pop = ~Bay/Con/Year) %>%
-  aboot(cutoff = 50, quiet = TRUE, sample = 1000, distance = provesti.dist, missingno="ignore")
-#This one makes a lot of sense
-
-
-#### Isolation by distance.####
-library(MASS)
-setPop(wfpopLD) <-~Bay
-wfpop.geo <-genind2genpop(wfpop2)
-Dgen <-dist.genpop(wfpop.geo,method=2) #edward's euclidean distance, but other methods are available. like provesti, nei, etc.
-
-#Create a coordinates list:
-coord.dist =matrix(c(41.008611,72.048611,40.791667,72.696111,40.606389,73.876389,40.845278,72.500556),nrow=4,ncol=2,byrow=TRUE)
-rownames(coord.dist) <-c("Nap","Mor","Jam","Shin")
-colnames(coord.dist)<-c("x","y")
-
-#i'm not sure if it's ok to just put in your own euclidean distance matrix like this but it seems to work. #previously i thought you had to attach it to the genpop objecte as $other, maybe as xy coordinates? I am not sure if it understands that it corresponds to population, but let's plot anyway? 
-Dgeo <-dist(coord.dist)
-
-ibd2 <-mantel.randtest(Dgen,Dgeo)
-ibd2
-plot(ibd2)
-
-
-dens <- kde2d(Dgeo,Dgen, n=300)
-myPal <- colorRampPalette(c("white","blue","gold", "orange", "red"))
-plot(Dgeo, Dgen, xlab="distance (KM)", ylim= c(0.1, 0.5),ylab="genetic distance (euclidean)")
-image(dens, col=transp(myPal(300),0.7), add=TRUE)
-abline(lm(Dgen~Dgeo))
-title("Isolation by distance plot")
-#strong looking pattern of IBD. 
-library("car")
-Anova(lm(Dgen~Dgeo))
-
-#try with ggplot
-
-
-##### AMOVA #####
-setPop(wfpopLD) <- ~Bay
-gapless <-missingno(wfpop2) # only works with gapless data. 
-strat.amo <-poppr.amova(gapless,~Bay)
-strat.amo
-
-#randomization test
-library("ade4")
-set.seed(1999)
-stratsig  <- ade4::randtest(strat.amo, nrepet = 999)
-plot(stratsig)
-stratsig
-
-#another AMOVA, this one from pegas. 
-setPop(wfpop2) <- ~Bay #idk how to change it so it doesn't care about Con/Year
-bov_dist  <- dist(wfpop2) # Euclidean distance
-bov_stra  <- strata(wfpop2)
-bov_amova <- pegas::amova(bov_dist ~ Bay, data = bov_stra, nperm = 100)
-bov_amova
-#no statistical difference between bays i think. 
-
-#yet another way to do an amova
-library("vegan")
-set.seed(20151219)
-res <- adonis(bov_dist ~ Bay, data = bov_stra, permutations = 99)
-res2<- adonis(bov_dist ~ Bay/Con/Year, data = bov_stra, permutations = 99)
-
-#let's look at different bays, but 2016 only!
-setPop(wfpop2) <- ~Bay/Year
-wfpop2016 <- popsub(wfpop2, blacklist=c("Shin_1_2017", "Shin_2_2017"))
-bov_stra2016  <- strata(wfpop2016)
-bov_dist2016  <- dist(wfpop2016)
-res3<- adonis(bov_dist2016 ~ Bay, data = bov_stra2016, permutations = 99)
-
-#with gapless datasets
-gapless <- missingno(wfpop2, type="geno", cutoff=0, freq=TRUE)
-setPop(gapless) <- ~Bay/Year
-wfpop2016 <- popsub(gapless, blacklist=c("Shin_1_2017", "Shin_2_2017"))
-bov_stra2016  <- strata(wfpop2016)
-bov_dist2016  <- dist(wfpop2016)
-res3<- adonis(bov_dist2016 ~ Bay, data = bov_stra2016, permutations = 99)
-
-#let's look within Shinnecock Bay
-setPop(wfpop2) <- ~Bay/Con/Year
-wfpopShin <- popsub(wfpop2, blacklist=c("Nap_6_2016", "Mor_6_2016", "Jam_6_2016"))
-bov_straS  <- strata(wfpopShin)
-bov_distS  <- dist(wfpopShin)
-resS<- adonis(bov_distS ~ Con/Year, data = bov_straS, permutations = 99)
-
-
-###### some more stats! #####
-#private alleles
-private_alleles(wfpop2)
-privateAlleles(wf.g2)
-
-#locus table
-locus_table(wfpop2)
-wflt.pair <- seppop(wfpop2) %>% lapply(locus_table) #by bay!
-
-#diversity boot
-mlgtab <-mlg.table(wfpop2)
-divboot <- diversity_boot(mlgtab, n=1000, H=TRUE, G=TRUE, lambda=TRUE, E5=TRUE)
-dci <-diversity_ci(wfpop2, n=10000, ci=95, plot=TRUE, center=TRUE, rarefy=FALSE, raw=TRUE)
-
-#with rarefaction
-
-dci <-diversity_ci(wfpop2, n=10000, ci=95, plot=FALSE, center=TRUE, rarefy=TRUE, raw=TRUE)
-
-
-#other stats
-otherstats<-diff_stats(wfpop2)
-#plot it
-per.locus <- melt(otherstats$per.locus, varnames = c("Locus", "Statistic"))
-stats     <- c("Hs", "Ht", "Gst", "Gprime_st", "D", "D")
-glob      <- data.frame(Statistic = stats, value = otherstats$global)
-ggplot(per.locus, aes(x = Statistic, y = value)) +
-  geom_boxplot() +
-  geom_point() +
-  geom_point(size = rel(3), color = "red", data = glob) +
-  ggtitle("Estimates of population differentiation")
-
-#bootstrap estimates
-set.seed(20151219) 
-bs_reps <- chao_bootstrap(wfpop2, nreps = 100) #100 for now. 
-summarise_bootstrap(bs_reps, Gst_Nei) # change the function you want to use  (eg, D_Jost, Gst_Hedrick or Gst_Nei) 
-
-#rarefaction to standardize diversity estimates
-# i can't find a function to do this, but as I understand it, I should subsample randomly from the existing shinnecock basically. 
