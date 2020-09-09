@@ -209,11 +209,11 @@ loc_stats[is.na(loc_stats)] <- NA
 
 #create different loc stats groups for testing. 
 loc_stats_bay <-filter(loc_stats, GRP %in% c("Nap","Mor","Jam","Shin","Mt"))
-loc_stats_BYC <-filter(loc_stats, GRP %in% c("Nap_6_2016","Mor_6_2016","Jam_6_2016","Shin_1_2016","Shin_2_2016","Mt_2_2015","Mt_1_2015","Mt_2_2016",  
-                                             "Mt_1_2016","Mt_3_2015","Mt_4_2015","Mt_3_2016","Mt_4_2016","Shin_1_2017","Shin_2_2017")) #does not include MT 5 because we don't know what those individuals are. 
-loc_stats_MT <-filter(loc_stats, GRP %in% c("Mt_2", "Mt_1", "Mt_3", "Mt_4")) #does not include MT 5 because we don't know what those individuals are. 
-loc_stats_shin <-filter(loc_stats, GRP %in% c("Shin_1_2016", "Shin_2_2016","Shin_1_2017","Shin_2_2017"))
-loc_stats_16 <-filter(loc_stats, GRP %in% c("Nap_2016","Mor_2016","Shin_2016","Mt_2016","Jam_2016"))
+#loc_stats_BYC <-filter(loc_stats, GRP %in% c("Nap_6_2016","Mor_6_2016","Jam_6_2016","Shin_1_2016","Shin_2_2016","Mt_2_2015","Mt_1_2015","Mt_2_2016",  
+ #                                            "Mt_1_2016","Mt_3_2015","Mt_4_2015","Mt_3_2016","Mt_4_2016","Shin_1_2017","Shin_2_2017")) #does not include MT 5 because we don't know what those individuals are. 
+#loc_stats_MT <-filter(loc_stats, GRP %in% c("Mt_2", "Mt_1", "Mt_3", "Mt_4")) #does not include MT 5 because we don't know what those individuals are. 
+#loc_stats_shin <-filter(loc_stats, GRP %in% c("Shin_1_2016", "Shin_2_2016","Shin_1_2017","Shin_2_2017"))
+#loc_stats_16 <-filter(loc_stats, GRP %in% c("Nap_2016","Mor_2016","Shin_2016","Mt_2016","Jam_2016"))
 
 #generic melt
 meltlocstats <-pivot_longer(loc_stats,cols = c("N_ALLELES", "SIMPSON_IDX", "EVENNESS","Ho","Hs","Ht","Fis","SHANNON_IDX","STODD_TAYLOR_IDX"),
@@ -620,42 +620,33 @@ ggsave('rariefied_allelesBaytile.png',path="/Users/tdolan/Documents/WIP research
 ##### FST ######
 
 #Weir and Cockheram FST global & pairwise. - probably your best bet. 
-library("strataG")
-setPop(wfpopLD) <-~Bay/Con
+setPop(wfpopLD) <-~Bay
 wf.g2 <-genind2gtypes(wfpopLD)
-#statFst(wf.g)
-popStruct <- popStructTest(wf.g2, stats = c(statFst, statFstPrime), nrep = 1000, quietly = TRUE)
+statFst(wf.g)
+#popStruct <- popStructTest(wf.g2, stats = c(statFst, statFstPrime), nrep = 1000, quietly = TRUE)
+popStruct <- popStructTest(wf.g2, nrep = 1000, quietly = FALSE)
 popStruct
 
-#some custom for mike
-setPop(wfpopLD) <- ~Bay/Con
+#FST heatmap
+bayFST <-as.data.frame(popStruct$pairwise$result) %>% dplyr::select(strata.1, strata.2, Fst, Fst.p.val)
 
-#explore structure within a bay using strataG
-setPop(wfpopLD) <-~Bay/Con/Year
-wf.s <-popsub(wfpopLD, c("Shin_1_2016","Shin_2_2016","Shin_1_2017", "Shin_2_2017"))
-wf.s2 <- genind2gtypes(wf.s)
-popStruct.S <- popStructTest(wf.s2, stats = c(statFst, statFstPrime), nrep = 1000, quietly = TRUE)
-popStruct.S
-
-bayyrcon <-as.data.frame(popStruct.S$pairwise$pair.mat$Fst)
-write.csv(bayyrcon,file="bayyerfst.csv")
-
-#explore structure within Mattituck
-setPop(wfpopLD) <-~Bay/Con/Year
-wf.M <-popsub(wfpopLD, c("Mt_1_2015","Mt_2_2015","Mt_1_2016", "Mt_2_2016", "Mt_3_2015", "Mt_4_2015", "Mt_5_2015", "Mt_3_2016", "Mt_4_2016", "Mt_5_2016"))
-wf.M2 <- genind2gtypes(wf.M)
-popStruct.M <- popStructTest(wf.M2, stats = c(statFst, statFstPrime), nrep = 1000, quietly = TRUE)
-popStruct.M
-
-
-
-#with the pruned dataset from shin
-popStruct.nosibs <- popStructTest(wfpopLDnosibs, stats = c(statFst, statFstPrime), nrep = 1000, quietly = TRUE)
-popStruct.nosibs
+# Filled by test statistic: NEI - shows graphical options. 
+bayFST %>%
+  ggplot(aes(x = strata.1, y = strata.2))+
+  geom_tile(aes(fill=Fst), show.legend = TRUE)+ # Filled by test statistic
+  #geom_tile(aes(fill=p.value), show.legend = TRUE)+ #filled  by p.value (gradient)
+  #geom_tile(aes(fill=p_value), show.legend = TRUE)+ #filled  by p_value (discrete)
+  #scale_fill_gradient(low ="#023858" , high = "#a6bddb", space = "Lab", na.value = "white", guide = "colourbar", aesthetics = "fill")+ #gradient fill
+  scale_fill_viridis_c()+
+  #scale_fill_manual(values=cols)+
+  geom_text(aes(label = round(Fst.p.val,3)), color="white", size=5)+
+  #scale_color_manual(values=c("white","red"), guide=FALSE)+
+  xlab("")+ylab("")+
+  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
+ggsave('FSTBaytile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
 
 #see previous scripts for other kinds of FST you can calculate
 
-# ultimately, you will need help interpreting these. 
 
 #### Inbreeding - Internal Relatedness ####
 library("Rhh")
@@ -677,11 +668,6 @@ rel2 <-dplyr::select(rel2,Ind,pop,IR)
 
 ddply(rel2, ~pop, summarize, meanir=mean(IR))
 
-#violin plot
-p <- ggplot(rel2, aes(x=pop, y=IR)) + 
-  geom_violin(trim=FALSE,fill='#A4A4A4', color="darkred")+
-  stat_summary(fun.data="mean_sdl", geom="pointrange")
-
 #barplot as before
 ggplot(rel2, aes(x=pop,y=IR))+
   #ggplot(aes(x=fct_inorder(GRP),y=value))+
@@ -691,6 +677,67 @@ ggplot(rel2, aes(x=pop,y=IR))+
   xlab(' ')+ylab("IR")+theme_cowplot()+guides(fill = FALSE, colour = FALSE) 
 #ggsave('IRld.png', width = 7, height = 7)
 
+rel2 <- arrange(rel2,pop)
+drabcolors2 <-c("#d0d1e6","#a6bddb", "#67a9cf", "#1c9099", "#016450")
+rel2 <-mutate(rel2,name=fct_relevel(pop,"Jam","Mor","Mt","Nap","Shin"))
+rel2 %>%
+  ggplot(aes(x=fct_rev(name),y=IR),fill=name)+
+  geom_boxplot(aes(fill=name))+ 
+  scale_fill_manual(name = "Bay",values = drabcolors2)+
+  coord_flip()+ 
+  #ylim(0.7,1.0)+
+  xlab(' ')+ylab("Internal Relatedness")+
+  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
+        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
+ggsave('rel_bay.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
+
+# lets try testing for significant differences in mean IR for each bay pair with a wilcox sign test, idk why that's not ok... 
+comp <- as.character(unique(rel2$name))  
+pairs <- expand.grid(comp, comp) %>%
+  filter(!Var1 == Var2) %>%
+  rownames_to_column("PAIR") %>%
+  split(.$PAIR) %>%
+  purrr::map(function(x){
+    x %>%
+      dplyr::select(-PAIR)  %>%
+      gather(key = rel2, value = name, 1:2) %>%
+      dplyr::select(-rel2)})
+rel2 <-as.data.frame(rel2) 
+# empty data frame for results
+results_ir <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), c("pop1", "pop2", "stat", "temp", "p.value"))
+n <- as.numeric(length(pairs))
+
+library("coin")
+# loop over pairs
+for(p in 1:n){
+  pair <- pairs[[p]]$name
+  temp <- rel2 %>%
+    dplyr::filter(name %in% pair) %>%
+    mutate(name = ordered(name, levels = pair),
+           Ind = as.factor(Ind)) %>%
+    droplevels()
+  wilcox <- wilcoxsign_test(IR ~ name,   
+                            data = temp,
+                            zero.method = "Pratt")
+  df <- data.frame("pop1" = pair[1], 
+                   "pop2" = pair[2], 
+                   "stat" = as.numeric(wilcox@statistic@teststatistic), 
+                   "p-value" = as.numeric(pvalue(wilcox)))
+  results_ir <- bind_rows(results_ir, df)}
+#these p.values are too low. 
+
+#what about an anova followed by ls means? 
+#ls means doesn't work but tukey hsd does. 
+library("agricolae")
+library("lsmeans")
+anoIR <-lm(IR~pop, na.action=na.omit, data=rel2)
+ano2 <-car::Anova(anoIR)
+ano2
+df<-df.residual(anoIR)
+MSerror<-deviance(anoIR)/df
+comparison <- HSD.test(anoIR,c("pop"),MSerror=MSerror, unbalanced=TRUE,alpha=0.05/6, group=TRUE)
+comparison
+
 ## test for significant differences in mean IR for each bay-pair, with t test. Print only the p values. 
 jam <-filter(rel2,pop=="Jam")
 shin <-filter(rel2,pop=="Shin")
@@ -698,49 +745,76 @@ nap <-filter(rel2,pop=="Nap")
 mor <-filter(rel2,pop=="Mor")
 mt <-filter(rel2,pop=="Mt")
 
-print("Nap vs. Shin")
-var.test(nap$IR,shin$IR)
-t.test(nap$IR,shin$IR,var.equal=TRUE)$p.value
-print("Nap vs. Mor")
-var.test(nap$IR,mor$IR)
-t.test(nap$IR,mor$IR,var.equal=TRUE)$p.value
-print("Jam vs. Nap")
-var.test(jam$IR,nap$IR)
-t.test(jam$IR,nap$IR,var.equal=TRUE)$p.value
-print("Mor vs. Shin")
-var.test(mor$IR,shin$IR)
-t.test(mor$IR,shin$IR,var.equal=TRUE)$p.value
-print("Jam vs. Shin")
-var.test(jam$IR,shin$IR)
-t.test(jam$IR,shin$IR,var.equal=TRUE)$p.value
-print("Jam vs. Mor")
-var.test(jam$IR,mor$IR)
-t.test(jam$IR,mor$IR,var.equal=TRUE)$p.value
+#Nap v. Shin
+#var.test(nap$IR,shin$IR) 
+t <-t.test(nap$IR,shin$IR,var.equal=TRUE)$p.value
+a <-c(t, "Nap","Shin")
+#nap v. mor
+#var.test(nap$IR,mor$IR)
+t <-t.test(nap$IR,mor$IR,var.equal=FALSE)$p.value
+b <-c(t, "Nap","Mor")
+#jam v. nap
+#var.test(jam$IR,nap$IR)
+t <-t.test(jam$IR,nap$IR,var.equal=TRUE)$p.value
+c <-c(t, "Jam","Nap")
+#mor v shin
+#var.test(mor$IR,shin$IR)
+t <-t.test(mor$IR,shin$IR,var.equal=TRUE)$p.value
+d <-c(t, "Mor","Shin")
+#jam v shin
+#var.test(jam$IR,shin$IR)
+t <-t.test(jam$IR,shin$IR,var.equal=TRUE)$p.value
+e <-c(t, "Jam","Shin")
+#jam v. mor
+#var.test(jam$IR,mor$IR)
+t <-t.test(jam$IR,mor$IR,var.equal=TRUE)$p.value
+f <-c(t, "Jam","Mor")
+#jam v. mt
+#var.test(jam$IR,mt$IR)
+t <-t.test(jam$IR,mt$IR,var.equal=TRUE)$p.value
+g <-c(t, "Jam","Mt")
+#shin v mt
+#var.test(shin$IR,mt$IR)
+t <-t.test(shin$IR,mt$IR,var.equal=TRUE)$p.value
+h <-c(t, "Shin","Mt")
+#mor v mt
+#var.test(mor$IR,mt$IR)
+t <-t.test(mor$IR,mt$IR,var.equal=TRUE)$p.value
+i <-c(t, "Mor","Mt")
+#nap v mt
+#var.test(nap$IR,mt$IR)
+t <-t.test(nap$IR,mt$IR,var.equal=TRUE)$p.value
+j <-c(t, "Nap","Mt")
 
-print("Jam vs. Mt")
-var.test(jam$IR,mt$IR)
-t.test(jam$IR,mt$IR,var.equal=TRUE)$p.value
-print("Shin vs. Mt")
-var.test(shin$IR,mt$IR)
-t.test(shin$IR,mt$IR,var.equal=TRUE)$p.value
-print("Mor vs. Mt")
-var.test(mor$IR,mt$IR)
-t.test(mor$IR,mt$IR,var.equal=TRUE)$p.value
-print("Nap vs. Mt")
-var.test(nap$IR,mt$IR)
-t.test(nap$IR,mt$IR,var.equal=TRUE)$p.value
-#no significant differences between bays. 
+t <- rbind(a,b,c,d,e,f,g,h,i,j)
+colnames(t) <- c("pr.t", "bay1","bay2")
+t<-as.data.frame(t)
+
+#significant differences between bays. 
 #hmmm I think there is a more efficient way to code this. 
+# why not a wilcox test? you can definitely still make a heatmap for this.  
+
+pairwise.t.test(rel2$IR, rel2$name) #idk if this is right, but let's automate the t tests. 
+t<-mutate(t,pr.t=as.numeric(as.character(pr.t)))%>% mutate(p_value = cut(pr.t, breaks=c(0,0.005, 0.01,0.05,0.1,0.5,1)), significance=ifelse(pr.t < 0.005, "sig","not.sig"))
+cols <- c("(0,0.005]"="#034e7b", "(0.005,0.01]" = "#045a8d", "(0.01,0.05]" = "#2b8cbe", "(0.05,0.1]" = "#74a9cf", "(0.1,0.5]"  = "#a6bddb", "(0.5,1]"="#d0d1e6")
+t<- arrange(t, bay1) %>% mutate(bay1=as.character(bay1), bay2=as.character(bay2)) %>%mutate(pair1 = pmin(bay1,bay2), pair2 =pmax(bay1,bay2)) %>% arrange(pair1)
+
+t %>%
+  ggplot(aes(x = pair1, y = pair2))+
+  geom_tile(aes(fill=p_value), show.legend = TRUE)+ # Filled by test statistic
+  #geom_tile(aes(fill=p.value), show.legend = TRUE)+ #filled  by p.value (gradient)
+  #geom_tile(aes(fill=p_value), show.legend = TRUE)+ #filled  by p_value (discrete)
+  #scale_fill_gradient(low ="#023858" , high = "#a6bddb", space = "Lab", na.value = "white", guide = "colourbar", aesthetics = "fill")+ #gradient fill
+  scale_fill_manual(values=cols)+
+  geom_text(aes(label = round(pr.t,3),color=significance),size=5)+
+  scale_color_manual(values=c("white","red"), guide=FALSE)+
+  xlab("")+ylab("")+
+  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
+ggsave('IRBaytile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
 
 #### Genetic Distance ####
 
 ## Tree's using provesti's distance
-
-#Within Shinnecock
-set.seed(999)
-wf.s %>%
-  genind2genpop(pop = ~Bay/Con/Year) %>%
-  aboot(cutoff = 50, quiet = TRUE, sample = 1000, distance = provesti.dist, missingno="ignore")
 
 #all bays?
 set.seed(999)
@@ -749,49 +823,45 @@ wfpopLD %>%
   aboot(cutoff = 50, quiet = TRUE, sample = 1000, distance = provesti.dist, missingno="ignore")
 #This one makes a lot of sense
 
-#all bays?
-set.seed(999)
-wfpopLD %>%
-  genind2genpop(pop = ~Bay/Con/Year) %>%
-  aboot(cutoff = 50, quiet = TRUE, sample = 1000, distance = provesti.dist, missingno="ignore")
-#This one makes a lot of sense
 
 
 #### Isolation by distance.####
 library(MASS)
 setPop(wfpopLD) <-~Bay
-wfpop.geo <-genind2genpop(wfpop2)
+wfpop.geo <-genind2genpop(wfpopLD)
 Dgen <-dist.genpop(wfpop.geo,method=2) #edward's euclidean distance, but other methods are available. like provesti, nei, etc.
 
 #Create a coordinates list:
-coord.dist =matrix(c(41.008611,72.048611,40.791667,72.696111,40.606389,73.876389,40.845278,72.500556),nrow=4,ncol=2,byrow=TRUE)
-rownames(coord.dist) <-c("Nap","Mor","Jam","Shin")
+coord.dist =matrix(c(41.008611,72.048611,40.791667,72.696111,40.606389,73.876389,40.845278,72.500556,40.999167,72.545278),nrow=5,ncol=2,byrow=TRUE)
+rownames(coord.dist) <-c("Nap","Mor","Jam","Shin","Mt")
 colnames(coord.dist)<-c("x","y")
 
-#i'm not sure if it's ok to just put in your own euclidean distance matrix like this but it seems to work. #previously i thought you had to attach it to the genpop objecte as $other, maybe as xy coordinates? I am not sure if it understands that it corresponds to population, but let's plot anyway? 
+#i'm not sure if it's ok to just put in your own euclidean distance matrix like this but it seems to work. 
+#previously i thought you had to attach it to the genpop objecte as $other, maybe as xy coordinates? 
+#I am not sure if it understands that it corresponds to population, but let's plot anyway? 
 Dgeo <-dist(coord.dist)
 
 ibd2 <-mantel.randtest(Dgen,Dgeo)
 ibd2
 plot(ibd2)
-
-
+library("MASS")
 dens <- kde2d(Dgeo,Dgen, n=300)
 myPal <- colorRampPalette(c("white","blue","gold", "orange", "red"))
 plot(Dgeo, Dgen, xlab="distance (KM)", ylim= c(0.1, 0.5),ylab="genetic distance (euclidean)")
-image(dens, col=transp(myPal(300),0.7), add=TRUE)
+#image(dens, col=transp(myPal(300),0.7), add=TRUE)
 abline(lm(Dgen~Dgeo))
-title("Isolation by distance plot")
+title("Isolation by distance")
 #strong looking pattern of IBD. 
 library("car")
 Anova(lm(Dgen~Dgeo))
 
-#try with ggplot
+
 
 
 ##### AMOVA #####
+#kevin said better to do AMOVA in Arlequin
 setPop(wfpopLD) <- ~Bay
-gapless <-missingno(wfpop2) # only works with gapless data. 
+gapless <-missingno(wfpopLD) # only works with gapless data. 
 strat.amo <-poppr.amova(gapless,~Bay)
 strat.amo
 
@@ -803,9 +873,9 @@ plot(stratsig)
 stratsig
 
 #another AMOVA, this one from pegas. 
-setPop(wfpop2) <- ~Bay #idk how to change it so it doesn't care about Con/Year
-bov_dist  <- dist(wfpop2) # Euclidean distance
-bov_stra  <- strata(wfpop2)
+setPop(wfpopLD) <- ~Bay #idk how to change it so it doesn't care about Con/Year
+bov_dist  <- dist(wfpopLD) # Euclidean distance
+bov_stra  <- strata(wfpopLD)
 bov_amova <- pegas::amova(bov_dist ~ Bay, data = bov_stra, nperm = 100)
 bov_amova
 #no statistical difference between bays i think. 

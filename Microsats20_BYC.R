@@ -620,3 +620,168 @@ results_arSHI %>%
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
 ggsave('rariefied_allelesSHItile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
 
+###### FST ########
+#Weir and Cockheram FST global & pairwise. - probably your best bet. 
+library("strataG")
+
+wf.s2 <- genind2gtypes(wf.shin)
+popStruct.S <- popStructTest(wf.s2, stats = c(statFst, statFstPrime), nrep = 1000, quietly = TRUE)
+popStruct.S
+
+bayyrcon <-as.data.frame(popStruct.S$pairwise$pair.mat$Fst)
+write.csv(bayyrcon,file="bayyerfstSHI.csv")
+
+#explore structure within Mattituck
+wf.M2 <- genind2gtypes(wf.mt)
+popStruct.M <- popStructTest(wf.M2, stats = c(statFst, statFstPrime), nrep = 1000, quietly = TRUE)
+popStruct.M
+
+#FST heatmap
+bayFST <-as.data.frame(popStruct$pairwise$result) %>% dplyr::select(strata.1, strata.2, Fst, Fst.p.val)
+
+# Filled by  - shows graphical options. 
+bayFST %>%
+  ggplot(aes(x = strata.1, y = strata.2))+
+  geom_tile(aes(fill=Fst), show.legend = TRUE)+ # Filled by test statistic
+  #geom_tile(aes(fill=p.value), show.legend = TRUE)+ #filled  by p.value (gradient)
+  #geom_tile(aes(fill=p_value), show.legend = TRUE)+ #filled  by p_value (discrete)
+  #scale_fill_gradient(low ="#023858" , high = "#a6bddb", space = "Lab", na.value = "white", guide = "colourbar", aesthetics = "fill")+ #gradient fill
+  scale_fill_viridis_c()+
+  #scale_fill_manual(values=cols)+
+  geom_text(aes(label = round(Fst.p.val,3)), color="white", size=5)+
+  #scale_color_manual(values=c("white","red"), guide=FALSE)+
+  xlab("")+ylab("")+
+  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
+ggsave('FSTBaytile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
+
+
+
+####### IR ###############
+
+library("Rhh")
+setPop(wfpopLD) <-~Bay
+#wfp <-genind2df(wfpopLD)
+wfp <-genind2df(wfpopLD, usepop = TRUE, oneColPerAll = TRUE) %>% tibble::rownames_to_column("Ind")
+wfp <-mutate_at(wfp,vars(-pop, -Ind),as.numeric)
+wfp[is.na(wfp)] <- 0
+
+rel <- dplyr::select(wfp, -1, -2)
+rel <-ir(rel)
+#rel <-ir(wfp[,-1])
+
+#rel
+rel2 <-as.data.frame(rel)
+names(rel2) <-c("IR")
+rel2 <-cbind(wfp,rel2) 
+rel2 <-dplyr::select(rel2,Ind,pop,IR)
+
+ddply(rel2, ~pop, summarize, meanir=mean(IR))
+
+#barplot as before
+ggplot(rel2, aes(x=pop,y=IR))+
+  #ggplot(aes(x=fct_inorder(GRP),y=value))+
+  geom_boxplot(fill="lightgray")+ 
+  coord_flip()+ 
+  #ylim(0.7,1.0)+
+  xlab(' ')+ylab("IR")+theme_cowplot()+guides(fill = FALSE, colour = FALSE) 
+#ggsave('IRld.png', width = 7, height = 7)
+
+rel2 <- arrange(rel2,pop)
+drabcolors2 <-c("#d0d1e6","#a6bddb", "#67a9cf", "#1c9099", "#016450")
+rel2 <-mutate(rel2,name=fct_relevel(pop,"Jam","Mor","Mt","Nap","Shin"))
+rel2 %>%
+  ggplot(aes(x=fct_rev(name),y=IR),fill=name)+
+  geom_boxplot(aes(fill=name))+ 
+  scale_fill_manual(name = "Bay",values = drabcolors2)+
+  coord_flip()+ 
+  #ylim(0.7,1.0)+
+  xlab(' ')+ylab("Internal Relatedness")+
+  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
+        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
+ggsave('rel_bay.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
+
+## test for significant differences in mean IR for each bay-pair, with t test. Print only the p values. 
+jam <-filter(rel2,pop=="Jam")
+shin <-filter(rel2,pop=="Shin")
+nap <-filter(rel2,pop=="Nap")
+mor <-filter(rel2,pop=="Mor")
+mt <-filter(rel2,pop=="Mt")
+
+#Nap v. Shin
+#var.test(nap$IR,shin$IR) 
+t <-t.test(nap$IR,shin$IR,var.equal=TRUE)$p.value
+a <-c(t, "Nap","Shin")
+#nap v. mor
+#var.test(nap$IR,mor$IR)
+t <-t.test(nap$IR,mor$IR,var.equal=FALSE)$p.value
+b <-c(t, "Nap","Mor")
+#jam v. nap
+#var.test(jam$IR,nap$IR)
+t <-t.test(jam$IR,nap$IR,var.equal=TRUE)$p.value
+c <-c(t, "Jam","Nap")
+#mor v shin
+#var.test(mor$IR,shin$IR)
+t <-t.test(mor$IR,shin$IR,var.equal=TRUE)$p.value
+d <-c(t, "Mor","Shin")
+#jam v shin
+#var.test(jam$IR,shin$IR)
+t <-t.test(jam$IR,shin$IR,var.equal=TRUE)$p.value
+e <-c(t, "Jam","Shin")
+#jam v. mor
+#var.test(jam$IR,mor$IR)
+t <-t.test(jam$IR,mor$IR,var.equal=TRUE)$p.value
+f <-c(t, "Jam","Mor")
+#jam v. mt
+#var.test(jam$IR,mt$IR)
+t <-t.test(jam$IR,mt$IR,var.equal=TRUE)$p.value
+g <-c(t, "Jam","Mt")
+#shin v mt
+#var.test(shin$IR,mt$IR)
+t <-t.test(shin$IR,mt$IR,var.equal=TRUE)$p.value
+h <-c(t, "Shin","Mt")
+#mor v mt
+#var.test(mor$IR,mt$IR)
+t <-t.test(mor$IR,mt$IR,var.equal=TRUE)$p.value
+i <-c(t, "Mor","Mt")
+#nap v mt
+#var.test(nap$IR,mt$IR)
+t <-t.test(nap$IR,mt$IR,var.equal=TRUE)$p.value
+j <-c(t, "Nap","Mt")
+
+t <- rbind(a,b,c,d,e,f,g,h,i,j)
+colnames(t) <- c("pr.t", "bay1","bay2")
+t<-as.data.frame(t)
+
+#significant differences between bays. 
+#hmmm I think there is a more efficient way to code this. 
+# why not a wilcox test? you can definitely still make a heatmap for this.  
+
+pairwise.t.test(rel2$IR, rel2$name) #idk if this is right, but let's automate the t tests. 
+t<-mutate(t,pr.t=as.numeric(as.character(pr.t)))%>% mutate(p_value = cut(pr.t, breaks=c(0,0.005, 0.01,0.05,0.1,0.5,1)), significance=ifelse(pr.t < 0.005, "sig","not.sig"))
+cols <- c("(0,0.005]"="#034e7b", "(0.005,0.01]" = "#045a8d", "(0.01,0.05]" = "#2b8cbe", "(0.05,0.1]" = "#74a9cf", "(0.1,0.5]"  = "#a6bddb", "(0.5,1]"="#d0d1e6")
+t<- arrange(t, bay1) %>% mutate(bay1=as.character(bay1), bay2=as.character(bay2)) %>%mutate(pair1 = pmin(bay1,bay2), pair2 =pmax(bay1,bay2)) %>% arrange(pair1)
+
+t %>%
+  ggplot(aes(x = pair1, y = pair2))+
+  geom_tile(aes(fill=p_value), show.legend = TRUE)+ # Filled by test statistic
+  #geom_tile(aes(fill=p.value), show.legend = TRUE)+ #filled  by p.value (gradient)
+  #geom_tile(aes(fill=p_value), show.legend = TRUE)+ #filled  by p_value (discrete)
+  #scale_fill_gradient(low ="#023858" , high = "#a6bddb", space = "Lab", na.value = "white", guide = "colourbar", aesthetics = "fill")+ #gradient fill
+  scale_fill_manual(values=cols)+
+  geom_text(aes(label = round(pr.t,3),color=significance),size=5)+
+  scale_color_manual(values=c("white","red"), guide=FALSE)+
+  xlab("")+ylab("")+
+  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
+ggsave('IRBaytile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
+
+### Genetic Distance ###
+
+## Tree's using provesti's distance
+
+#Within Shinnecock
+set.seed(999)
+wf.s %>%
+  genind2genpop(pop = ~Bay/Con/Year) %>%
+  aboot(cutoff = 50, quiet = TRUE, sample = 1000, distance = provesti.dist, missingno="ignore")
+
+
