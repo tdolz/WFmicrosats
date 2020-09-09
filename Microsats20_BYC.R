@@ -34,6 +34,10 @@ setwd("/Users//tdolan/Documents//R-Github//WFmicrosats")
 wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_20_sept20204genalex_doubl0.csv")
 wfpop4df <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_20_sept2020_doubl0.csv", header = TRUE) #csv version 
 
+
+splitStrata(wfpop) <-~Ocean/Bay/Con/Year
+setPop(wfpop) <-~Bay
+
 #remove the same loci as before. 
 wfpopLD <-genclone2genind(wfpop)
 all_loci <- locNames(wfpopLD)# create vector of all loci
@@ -58,7 +62,19 @@ setPop(wf.mt) <-~Bay/Con
 wf.mt <-popsub(wf.mt, blacklist=c("Mt_5")) # we don't need the unidentified individuals. 
 # an important decision here... do we want to combine the early cohorts from 2015 with those from 2016 or not?? 
 
-#HWE Heatmap#
+
+#create a combined dataset -- This die not work come back to this. 
+setPop(wf.mt) <- ~Bay/Con/Year
+wf.mt2 <-genind2df(wf.mt, usepop=TRUE, oneColPerAll = TRUE)
+wf.mt2 <-mutate(wf.mt2, newpop = ifelse(pop %in% c("Mt_3_2015","Mt_3_2016"),"Mt_3_both",ifelse(pop %in% c("Mt_4_2015","Mt_4_2016"),"Mt_4_both",as.character(pop)))) 
+wf.mt2 <-wf.mt2[,c(34,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33)]
+wf.mt2 <-dplyr::select(wf.mt2, -pop) %>% dplyr::rename(pop=newpop) %>%add_rownames(var="notind") ###THE IND NAME IS NOT RETAINED!!!!!
+#couldn't get df2genind to work. let's write it as a csv and reimport it? 
+write.csv(wf.mt2, file="mtnewpop.csv")
+wf.mt3 <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/mtnewpop4genalex.csv")
+splitStrata(wf.mt3) <-~Bay/Con/Year
+
+######HWE Heatmap######
 #Shinnecock
 shihwe.pop <- seppop(wf.shin) %>% lapply(hw.test)
 write.csv(shihwe.pop, file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/wfhwepop16shin.csv")
@@ -625,22 +641,16 @@ ggsave('rariefied_allelesSHItile.png',path="/Users/tdolan/Documents/WIP research
 library("strataG")
 
 wf.s2 <- genind2gtypes(wf.shin)
-popStruct.S <- popStructTest(wf.s2, stats = c(statFst, statFstPrime), nrep = 1000, quietly = TRUE)
+popStruct.S <- popStructTest(wf.s2, nrep = 1000, quietly = TRUE)
 popStruct.S
 
-bayyrcon <-as.data.frame(popStruct.S$pairwise$pair.mat$Fst)
-write.csv(bayyrcon,file="bayyerfstSHI.csv")
-
-#explore structure within Mattituck
-wf.M2 <- genind2gtypes(wf.mt)
-popStruct.M <- popStructTest(wf.M2, stats = c(statFst, statFstPrime), nrep = 1000, quietly = TRUE)
-popStruct.M
-
 #FST heatmap
-bayFST <-as.data.frame(popStruct$pairwise$result) %>% dplyr::select(strata.1, strata.2, Fst, Fst.p.val)
+ShiFST <-as.data.frame(popStruct.S$pairwise$result) %>% dplyr::select(strata.1, strata.2, Fst, Fst.p.val)
+#mutate(p_value = cut(Fst.p.val, breaks=c(-0.02,0     0,0.005, 0.01,0.05,0.1,0.5,1)), significance=ifelse(pr.t < 0.005, "sig","not.sig"))
+#cols <- c("(0,0.005]"="#034e7b", "(0.005,0.01]" = "#045a8d", "(0.01,0.05]" = "#2b8cbe", "(0.05,0.1]" = "#74a9cf", "(0.1,0.5]"  = "#a6bddb", "(0.5,1]"="#d0d1e6")
 
 # Filled by  - shows graphical options. 
-bayFST %>%
+ShiFST %>%
   ggplot(aes(x = strata.1, y = strata.2))+
   geom_tile(aes(fill=Fst), show.legend = TRUE)+ # Filled by test statistic
   #geom_tile(aes(fill=p.value), show.legend = TRUE)+ #filled  by p.value (gradient)
@@ -652,8 +662,57 @@ bayFST %>%
   #scale_color_manual(values=c("white","red"), guide=FALSE)+
   xlab("")+ylab("")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-ggsave('FSTBaytile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
+ggsave('FSTShitile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
 
+
+#explore structure within Mattituck
+wf.M2 <- genind2gtypes(wf.mt)
+popStruct.M <- popStructTest(wf.M2, nrep = 1000, quietly = TRUE)
+popStruct.M
+
+#FST heatmap
+MtFST <-as.data.frame(popStruct.M$pairwise$result) %>% dplyr::select(strata.1, strata.2, Fst, Fst.p.val)
+  MtFST %>%
+  ggplot(aes(x = strata.1, y = strata.2))+
+  geom_tile(aes(fill=Fst), show.legend = TRUE)+ # Filled by test statistic
+  scale_fill_viridis_c()+
+  geom_text(aes(label = round(Fst.p.val,3)), color="white", size=5)+
+  xlab("")+ylab("")+
+  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
+ggsave('FSTMttile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
+
+
+#MATTITUCK but separate year cohorts
+setPop(wf.mt) <-~Bay/Con/Year
+wf.M3 <-genind2gtypes(wf.mt)
+popStruct.M3 <- popStructTest(wf.M3, nrep = 1000, quietly = TRUE)
+popStruct.M3
+#FST heatmap
+MtFST3 <-as.data.frame(popStruct.M3$pairwise$result) %>% dplyr::select(strata.1, strata.2, Fst, Fst.p.val)
+MtFST3 %>%
+  ggplot(aes(x = strata.1, y = strata.2))+
+  geom_tile(aes(fill=Fst), show.legend = TRUE)+ # Filled by test statistic
+  scale_fill_viridis_c()+
+  geom_text(aes(label = round(Fst.p.val,3)), color="white", size=5)+
+  xlab("")+ylab("")+
+  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
+ggsave('FSTMt3tile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
+
+#MATTITUCK but adults are combined and YOY are not!
+wf.mt3
+wf.mt3Com <-genind2gtypes(wf.mt3)
+popStruct.MCom <- popStructTest(wf.mt3Com, nrep = 1000, quietly = TRUE)
+popStruct.MCom
+
+MtFSTCom <-as.data.frame(popStruct.MCom$pairwise$result) %>% dplyr::select(strata.1, strata.2, Fst, Fst.p.val)
+MtFSTCom %>%
+  ggplot(aes(x = strata.1, y = strata.2))+
+  geom_tile(aes(fill=Fst), show.legend = TRUE)+ # Filled by test statistic
+  scale_fill_viridis_c()+
+  geom_text(aes(label = round(Fst.p.val,3)), color="white", size=5)+
+  xlab("")+ylab("")+
+  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
+ggsave('FSTMtCombinedAdultstile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
 
 
 ####### IR ###############
