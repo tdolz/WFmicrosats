@@ -645,24 +645,25 @@ popStruct.S <- popStructTest(wf.s2, nrep = 1000, quietly = TRUE)
 popStruct.S
 
 #FST heatmap
-ShiFST <-as.data.frame(popStruct.S$pairwise$result) %>% dplyr::select(strata.1, strata.2, Fst, Fst.p.val)
-#mutate(p_value = cut(Fst.p.val, breaks=c(-0.02,0     0,0.005, 0.01,0.05,0.1,0.5,1)), significance=ifelse(pr.t < 0.005, "sig","not.sig"))
-#cols <- c("(0,0.005]"="#034e7b", "(0.005,0.01]" = "#045a8d", "(0.01,0.05]" = "#2b8cbe", "(0.05,0.1]" = "#74a9cf", "(0.1,0.5]"  = "#a6bddb", "(0.5,1]"="#d0d1e6")
+ShiFST <-as.data.frame(popStruct.S$pairwise$result) %>% dplyr::select(strata.1, strata.2, Fst, Fst.p.val)%>%
+mutate(p_value = cut(Fst.p.val, breaks=c(0,0.001,0.005,0.01,0.05,0.1,0.5,1)), significance=ifelse(Fst.p.val < 0.005, "sig","not.sig"))
+cols <- c("(0,0.001]"="#023858","(0.001,0.005]"="#034e7b", "(0.001,0.01]" = "#045a8d", "(0.01,0.05]" = "#2b8cbe", "(0.05,0.1]" = "#74a9cf", "(0.1,0.5]"  = "#a6bddb", "(0.5,1]"="#d0d1e6")
 
-# Filled by  - shows graphical options. 
+# Filled by  p value, and reporting the fst value. 
 ShiFST %>%
   ggplot(aes(x = strata.1, y = strata.2))+
-  geom_tile(aes(fill=Fst), show.legend = TRUE)+ # Filled by test statistic
+  #geom_tile(aes(fill=Fst), show.legend = TRUE)+ # Filled by test statistic
   #geom_tile(aes(fill=p.value), show.legend = TRUE)+ #filled  by p.value (gradient)
-  #geom_tile(aes(fill=p_value), show.legend = TRUE)+ #filled  by p_value (discrete)
+  geom_tile(aes(fill=p_value), show.legend = TRUE)+ #filled  by p_value (discrete)
   #scale_fill_gradient(low ="#023858" , high = "#a6bddb", space = "Lab", na.value = "white", guide = "colourbar", aesthetics = "fill")+ #gradient fill
-  scale_fill_viridis_c()+
-  #scale_fill_manual(values=cols)+
-  geom_text(aes(label = round(Fst.p.val,3)), color="white", size=5)+
-  #scale_color_manual(values=c("white","red"), guide=FALSE)+
+  #scale_fill_viridis_c()+
+  scale_fill_manual(values=cols)+
+  #geom_text(aes(label = round(Fst.p.val,3)), color="white", size=5)+  #label is p value
+  geom_text(aes(label = round(Fst,3),color="signifcance"), size=5)+  #label is FST
+  scale_color_manual(values=c("white","red"), guide=FALSE)+
   xlab("")+ylab("")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-ggsave('FSTShitile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
+ggsave('FSTShitileP.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
 
 
 #explore structure within Mattituck
@@ -671,14 +672,23 @@ popStruct.M <- popStructTest(wf.M2, nrep = 1000, quietly = TRUE)
 popStruct.M
 
 #FST heatmap
-MtFST <-as.data.frame(popStruct.M$pairwise$result) %>% dplyr::select(strata.1, strata.2, Fst, Fst.p.val)
+MtFST <-as.data.frame(popStruct.M$pairwise$result) %>% dplyr::select(strata.1, strata.2, Fst, Fst.p.val)%>%
+  mutate(p_value = cut(Fst.p.val, breaks=c(0,0.001,0.005,0.01,0.05,0.1,0.5,1)), significance=ifelse(Fst.p.val < 0.005, "sig","not.sig"))
+cols <- c("(0,0.001]"="#023858","(0.001,0.005]"="#034e7b", "(0.001,0.01]" = "#045a8d", "(0.01,0.05]" = "#2b8cbe", "(0.05,0.1]" = "#74a9cf", "(0.1,0.5]"  = "#a6bddb", "(0.5,1]"="#d0d1e6")
+
   MtFST %>%
-  ggplot(aes(x = strata.1, y = strata.2))+
-  geom_tile(aes(fill=Fst), show.legend = TRUE)+ # Filled by test statistic
-  scale_fill_viridis_c()+
-  geom_text(aes(label = round(Fst.p.val,3)), color="white", size=5)+
-  xlab("")+ylab("")+
-  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
+    ggplot(aes(x = strata.1, y = strata.2))+
+    #geom_tile(aes(fill=Fst), show.legend = TRUE)+ # Filled by test statistic
+    #geom_tile(aes(fill=p.value), show.legend = TRUE)+ #filled  by p.value (gradient)
+    geom_tile(aes(fill=p_value), show.legend = TRUE)+ #filled  by p_value (discrete)
+    #scale_fill_gradient(low ="#023858" , high = "#a6bddb", space = "Lab", na.value = "white", guide = "colourbar", aesthetics = "fill")+ #gradient fill
+    #scale_fill_viridis_c()+
+    scale_fill_manual(values=cols)+
+    #geom_text(aes(label = round(Fst.p.val,3)), color="white", size=5)+  #label is p value
+    geom_text(aes(label = round(Fst,3),color="signifcance"), size=5)+  #label is FST
+    scale_color_manual(values=c("white","red"), guide=FALSE)+
+    xlab("")+ylab("")+
+    theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
 ggsave('FSTMttile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
 
 
@@ -688,15 +698,24 @@ wf.M3 <-genind2gtypes(wf.mt)
 popStruct.M3 <- popStructTest(wf.M3, nrep = 1000, quietly = TRUE)
 popStruct.M3
 #FST heatmap
-MtFST3 <-as.data.frame(popStruct.M3$pairwise$result) %>% dplyr::select(strata.1, strata.2, Fst, Fst.p.val)
+MtFST3 <-as.data.frame(popStruct.M3$pairwise$result) %>% dplyr::select(strata.1, strata.2, Fst, Fst.p.val)%>%
+  mutate(p_value = cut(Fst.p.val, breaks=c(0,0.001,0.005,0.01,0.05,0.1,0.5,1)), significance=ifelse(Fst.p.val < 0.005, "sig","not.sig"))
+cols <- c("(0,0.001]"="#023858","(0.001,0.005]"="#034e7b", "(0.001,0.01]" = "#045a8d", "(0.01,0.05]" = "#2b8cbe", "(0.05,0.1]" = "#74a9cf", "(0.1,0.5]"  = "#a6bddb", "(0.5,1]"="#d0d1e6")
+
 MtFST3 %>%
   ggplot(aes(x = strata.1, y = strata.2))+
-  geom_tile(aes(fill=Fst), show.legend = TRUE)+ # Filled by test statistic
-  scale_fill_viridis_c()+
-  geom_text(aes(label = round(Fst.p.val,3)), color="white", size=5)+
+  #geom_tile(aes(fill=Fst), show.legend = TRUE)+ # Filled by test statistic
+  #geom_tile(aes(fill=p.value), show.legend = TRUE)+ #filled  by p.value (gradient)
+  geom_tile(aes(fill=p_value), show.legend = TRUE)+ #filled  by p_value (discrete)
+  #scale_fill_gradient(low ="#023858" , high = "#a6bddb", space = "Lab", na.value = "white", guide = "colourbar", aesthetics = "fill")+ #gradient fill
+  #scale_fill_viridis_c()+
+  scale_fill_manual(values=cols)+
+  #geom_text(aes(label = round(Fst.p.val,3)), color="white", size=5)+  #label is p value
+  geom_text(aes(label = round(Fst,3),color="signifcance"), size=5)+  #label is FST
+  scale_color_manual(values=c("white","red"), guide=FALSE)+
   xlab("")+ylab("")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-ggsave('FSTMt3tile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
+ggsave('FSTMt3tileP.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
 
 #MATTITUCK but adults are combined and YOY are not!
 wf.mt3
@@ -704,18 +723,55 @@ wf.mt3Com <-genind2gtypes(wf.mt3)
 popStruct.MCom <- popStructTest(wf.mt3Com, nrep = 1000, quietly = TRUE)
 popStruct.MCom
 
-MtFSTCom <-as.data.frame(popStruct.MCom$pairwise$result) %>% dplyr::select(strata.1, strata.2, Fst, Fst.p.val)
+MtFSTCom <-as.data.frame(popStruct.MCom$pairwise$result) %>% dplyr::select(strata.1, strata.2, Fst, Fst.p.val)%>%
+  mutate(p_value = cut(Fst.p.val, breaks=c(0,0.001,0.005,0.01,0.05,0.1,0.5,1)), significance=ifelse(Fst.p.val < 0.005, "sig","not.sig"))
+cols <- c("(0,0.001]"="#023858","(0.001,0.005]"="#034e7b", "(0.001,0.01]" = "#045a8d", "(0.01,0.05]" = "#2b8cbe", "(0.05,0.1]" = "#74a9cf", "(0.1,0.5]"  = "#a6bddb", "(0.5,1]"="#d0d1e6")
+
 MtFSTCom %>%
   ggplot(aes(x = strata.1, y = strata.2))+
-  geom_tile(aes(fill=Fst), show.legend = TRUE)+ # Filled by test statistic
-  scale_fill_viridis_c()+
-  geom_text(aes(label = round(Fst.p.val,3)), color="white", size=5)+
+  #geom_tile(aes(fill=Fst), show.legend = TRUE)+ # Filled by test statistic
+  #geom_tile(aes(fill=p.value), show.legend = TRUE)+ #filled  by p.value (gradient)
+  geom_tile(aes(fill=p_value), show.legend = TRUE)+ #filled  by p_value (discrete)
+  #scale_fill_gradient(low ="#023858" , high = "#a6bddb", space = "Lab", na.value = "white", guide = "colourbar", aesthetics = "fill")+ #gradient fill
+  #scale_fill_viridis_c()+
+  scale_fill_manual(values=cols)+
+  #geom_text(aes(label = round(Fst.p.val,3)), color="white", size=5)+  #label is p value
+  geom_text(aes(label = round(Fst,3),color="signifcance"), size=5)+  #label is FST
+  scale_color_manual(values=c("white","red"), guide=FALSE)+
   xlab("")+ylab("")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-ggsave('FSTMtCombinedAdultstile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
+ggsave('FSTMtCombinedAdultstileP.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
+
+#just look at MT YOY
+wf.mtyoy <-popsub(wf.mt3, blacklist=c("Mt_3_both", "Mt_4_both"))
+wf.mty <-genind2gtypes(wf.mtyoy)
+popStruct.y <- popStructTest(wf.mty, nrep = 1000, quietly = TRUE)
+popStruct.y
+
+MtFSTy <-as.data.frame(popStruct.y$pairwise$result) %>% dplyr::select(strata.1, strata.2, Fst, Fst.p.val)%>%
+  mutate(p_value = cut(Fst.p.val, breaks=c(0,0.001,0.005,0.01,0.05,0.1,0.5,1)), significance=ifelse(Fst.p.val < 0.005, "sig","not.sig"))
+cols <- c("(0,0.001]"="#023858","(0.001,0.005]"="#034e7b", "(0.001,0.01]" = "#045a8d", "(0.01,0.05]" = "#2b8cbe", "(0.05,0.1]" = "#74a9cf", "(0.1,0.5]"  = "#a6bddb", "(0.5,1]"="#d0d1e6")
+
+MtFSTy %>%
+  ggplot(aes(x = strata.1, y = strata.2))+
+  #geom_tile(aes(fill=Fst), show.legend = TRUE)+ # Filled by test statistic
+  #geom_tile(aes(fill=p.value), show.legend = TRUE)+ #filled  by p.value (gradient)
+  geom_tile(aes(fill=p_value), show.legend = TRUE)+ #filled  by p_value (discrete)
+  #scale_fill_gradient(low ="#023858" , high = "#a6bddb", space = "Lab", na.value = "white", guide = "colourbar", aesthetics = "fill")+ #gradient fill
+  #scale_fill_viridis_c()+
+  scale_fill_manual(values=cols)+
+  #geom_text(aes(label = round(Fst.p.val,3)), color="white", size=5)+  #label is p value
+  geom_text(aes(label = round(Fst,3),color="signifcance"), size=5)+  #label is FST
+  scale_color_manual(values=c("white","red"), guide=FALSE)+
+  xlab("")+ylab("")+
+  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
+ggsave('FSTMtyoyonlyP.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
+ #nothing here. 
 
 
-####### IR ###############
+
+
+####### IR ############### We haven't done this yet but will come back to this. 
 
 library("Rhh")
 setPop(wfpopLD) <-~Bay
