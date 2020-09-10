@@ -18,6 +18,7 @@ library("lattice")
 library("related")
 library("cowplot")
 library('reshape2')
+library('forcats')
 
 #keeping everything in this folder
 setwd("/Users//tdolan/Documents//R-Github//WFmicrosats")
@@ -54,10 +55,12 @@ write.table(df, "scratch",row.names = FALSE, col.names = FALSE, sep = "\t", quot
 genotypedata <- readgenotypedata("scratch")# import input file as list (gdata, nloci, nalleles, ninds, freqs)
 
 # pairwise relatedness (Lynch & Ritland 1999)
-relatedness_lynchrd <- coancestry(genotypedata$gdata,lynchrd = 2)
+relatedness_lynchrd <- coancestry(genotypedata$gdata,lynchrd = 1)
 
 #trioml estimate (Wang) - Can't do this because it crashes R studio. 
-#relatedness_triad <- coancestry(genotypedata$gdata,trioml = 2)
+relatedness_triad <- coancestry(genotypedata$gdata,trioml = 1)
+relatedT <- relatedness_triad$relatedness %>%
+  dplyr::select(pair.no, ind1.id, ind2.id, trioml)
 
 # write relatedness to file
 relatedn <- relatedness_lynchrd$relatedness %>%
@@ -85,21 +88,39 @@ relsim <- as.data.frame(cosim$data)
 relply<- ddply(relsim, Estimator~relationship,summarize, mean.rel = mean(Relatedness_Value), LIrel = quantile(Relatedness_Value,0.05), HIrel = quantile(Relatedness_Value, 0.95), medianrel= quantile(Relatedness_Value, 0.5))
 relply
 
-# relatedness - remember to change these values depending on what dataset you are using. 
+# relatedness (LYNCHRD)- remember to change these values depending on what dataset you are using. 
 ggplot(relatedn, aes(x = lynchrd)) +
-  geom_histogram(binwidth = 0.001, color = "black", fill = "darkorange") +
+  geom_histogram(binwidth = 0.001, color = "light grey", fill = "light grey") +
   geom_vline(aes(xintercept = mean(lynchrd, na.rm = TRUE)),
-             color = "darkblue", linetype = "dashed", size = 1) +
-  geom_vline(aes(xintercept = quantile(lynchrd, 0.95)),
-             color = "darkred", linetype = "dashed", size = 1) +
-  geom_vline(aes(xintercept = 0.23), color = "green", linetype = "dashed", size = 1) + #the estimated mean value for half sibs in the simulation
-  geom_vline(aes(xintercept = 0.48), color = "green", linetype = "dashed", size = 1) + #the estimated mean value for full sibs in the simulation
-  geom_vline(aes(xintercept = 0.47), color = "green", linetype = "dashed", size = 1) + #the estimated mean value for parent offspring in the simulation
-  geom_vline(aes(xintercept = 0.03),color = "purple", linetype = "dashed", size = 0.5) + #the Lynchrd 0.05 quantile on the simulated half sibs relationship
-  geom_vline(aes(xintercept = 0.53), color = "darkred", linetype = "dashed", size = 1) + #red is the 0.95 quantile
+             color = "black", linetype = "dashed", size = 0.5) +
+  #geom_vline(aes(xintercept = quantile(lynchrd, 0.95)),
+             #color = "darkred", linetype = "dashed", size = 0.5) +
+  geom_vline(aes(xintercept = 0.23), color = "darkblue", linetype = "dashed", size = 0.7) + #the estimated mean value for half sibs in the simulation
+  geom_vline(aes(xintercept = 0.48), color = "darkred", linetype = "dashed", size = 0.7) + #the estimated mean value for full sibs in the simulation
+  geom_vline(aes(xintercept = 0.47), color = "darkgreen", linetype = "dashed", size = 0.7) + #the estimated mean value for parent offspring in the simulation
+  #geom_vline(aes(xintercept = 0.08),color = "darkblue", linetype = "dotted", size = 0.5) + #the Lynchrd 0.05 quantile on the simulated half sibs relationship
+  #geom_vline(aes(xintercept = 0.49), color = "darkblue", linetype = "dotted", size = 0.5) + #red is the 0.95 quantile
   labs(x = "relatedness", y = "number of pairs")+
   theme_cowplot()
-#ggsave("pairwiserelatenessALL_11.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+#ggsave("pairwiserelatenessLYNCHRDALL_20.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+#dev.off()
+
+# relatedness (TRIOML)- remember to change these values depending on what dataset you are using. 
+#does not look as good. 
+ggplot(relatedT, aes(x = trioml)) +
+  geom_histogram(binwidth = 0.0001, color = "light grey", fill = "light grey") +
+  geom_vline(aes(xintercept = mean(trioml, na.rm = TRUE)),
+             color = "black", linetype = "dashed", size = 0.5) +
+  #geom_vline(aes(xintercept = quantile(lynchrd, 0.95)),
+  #color = "darkred", linetype = "dashed", size = 0.5) +
+  geom_vline(aes(xintercept = 0.26), color = "darkblue", linetype = "dashed", size = 0.7) + #the estimated mean value for half sibs in the simulation
+  geom_vline(aes(xintercept = 0.50), color = "darkred", linetype = "dashed", size = 0.7) + #the estimated mean value for full sibs in the simulation
+  geom_vline(aes(xintercept = 0.50), color = "darkgreen", linetype = "dashed", size = 0.7) + #the estimated mean value for parent offspring in the simulation
+  #geom_vline(aes(xintercept = 0.09),color = "darkblue", linetype = "dotted", size = 0.5) + #the Lynchrd 0.05 quantile on the simulated half sibs relationship
+  #geom_vline(aes(xintercept = 0.44), color = "darkblue", linetype = "dotted", size = 0.5) + #red is the 0.95 quantile
+  labs(x = "relatedness", y = "number of pairs")+
+  theme_cowplot()
+#ggsave("pairwiserelatenessTRIOMLALL_20.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
 #dev.off()
 
 
@@ -109,7 +130,7 @@ h <-dplyr::rename(h, Estimator=variable,Relatedness_Value=value)
 
 #how many of each? (based on estimator mean)
 filter(h,Relatedness_Value > 0.23 & Relatedness_Value <= 0.49) %>% n_distinct() #how many half sibs
-filter(h,Relatedness_Value > 0.47) %>% n_distinct() #full sibs or parent offspring
+filter(h,Relatedness_Value > 0.48) %>% n_distinct() #full sibs or parent offspring
 
 #create a dataset that combines fish pairs with information about their population
 popinfo <-dplyr::select(wfpop4df, Ind, Pop) %>% separate(Pop, c("Ocean","Bay","Con","Year"), remove=FALSE)
@@ -126,31 +147,76 @@ hs <-filter(hs,!is.na(Bay1))
 #find related fish from the same bay!
 same.bay <-filter(hs, Bay1==Bay2)
 #mean relatedness value of same bay pairs
-ddply(same.bay, ~Bay1, summarize, avr = mean(Relatedness_Value))
-filter(same.bay,Relatedness_Value >= 0.27 & Relatedness_Value <= 0.49) %>% n_distinct() #how many half sibs, 27
-filter(same.bay,Relatedness_Value > 0.49) %>% n_distinct() #how many full sibs, 2, 
-#very high relatedness value between 14 & 18 in Napeague and between S55 and S58 in Shinnecock. You should probably remove those individuals. 
+ddply(same.bay, ~Bay1, summarize, avr = mean(Relatedness_Value), sdrel =sd(Relatedness_Value),LCI = quantile(Relatedness_Value, 0.025), UCI= quantile(Relatedness_Value, 0.975))
+filter(same.bay,Relatedness_Value >= 0.23 & Relatedness_Value <= 0.48) %>% n_distinct() #how many half sibs
+filter(same.bay,Relatedness_Value > 0.48) %>% n_distinct() #how many full sibs
 
-### Remove individuals that had super high relatedness, are they the same individual? think about removing them. 
-## I am not going to remove them because they're from the same bay and the'yre not out of the range of full sibs from the simulation (which is also from the data so..idk)
+#relatedness diff bays
+diff.bay <-filter(hs, Bay1!=Bay2)
+#mean relatedness value of same bay pairs
+ddply(diff.bay, Bay2~Bay1, summarize, avr = mean(Relatedness_Value), sdrel =sd(Relatedness_Value),LCI = quantile(Relatedness_Value, 0.025), UCI= quantile(Relatedness_Value, 0.975))
+filter(diff.bay,Relatedness_Value >= 0.23 & Relatedness_Value <= 0.48) %>% n_distinct() #how many half sibs
+filter(diff.bay,Relatedness_Value > 0.48) %>% n_distinct() #how many full sibs
+
+##barplot of mean relatedness from same bay pairs. 
+drabcolors <-c("#d0d1e6","#a6bddb", "#67a9cf", "#1c9099", "#016450")
+
+same.bay %>%
+  ggplot(aes(x=fct_rev(Bay1),y=Relatedness_Value),fill=Bay1)+
+  #geom_boxplot(aes(fill=Bay1))+ 
+  ggplot2::stat_summary(
+    fun.data = mean_sdl,
+    fun.args = list(mult = 1),
+    geom = "pointrange",
+    position = ggplot2::position_nudge(x = 0.05, y = 0)
+  ) +
+  geom_flat_violin(aes(fill=Bay1),position = position_nudge(x = .1, y = 0),adjust=2, trim = FALSE)+
+  scale_fill_manual(name = "Bay",values = drabcolors)+coord_flip()+ 
+  geom_hline(aes(yintercept = 0.26), color = "black", linetype = "dotted", size = 0.7) + #the estimated mean value for half sibs in the simulation
+  geom_hline(aes(yintercept = 0.50), color = "black", linetype = "dashed", size = 0.5) + #the estimated mean value for full sibs in the simulation
+  #geom_hline(aes(yintercept = 0.50), color = "darkgreen", linetype = "dashed", size = 0.7) + #the estimated mean value for parent offspring in the simulation
+  xlab(' ')+ylab("Mean Relatedness")+
+  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
+        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
+ggsave('samebay_wAdults.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
+
+##violin plot of diff bay pairs
+diff.bay <-mutate(diff.bay, pair1 = pmin(Bay1,Bay2), pair2 =pmax(Bay1,Bay2)) %>% 
+  unite(BayPair, pair1,pair2, sep="-", remove=TRUE) %>% unique() 
+  
+diff.bay %>%
+  ggplot(aes(x=fct_rev(BayPair),y=Relatedness_Value))+
+  #geom_boxplot(aes(fill=Bay1))+ 
+  ggplot2::stat_summary(
+    fun.data = mean_sdl,
+    fun.args = list(mult = 1),
+    geom = "pointrange",
+    position = ggplot2::position_nudge(x = 0.05, y = 0)
+  ) +coord_flip()+ 
+  geom_flat_violin(position = position_nudge(x = .1, y = 0),adjust=2, trim = FALSE, fill="light grey")+
+  #scale_fill_manual(name = "Bay",values = drabcolors)
+  geom_hline(aes(yintercept = 0.26), color = "black", linetype = "dotted", size = 0.7) + #the estimated mean value for half sibs in the simulation
+  geom_hline(aes(yintercept = 0.50), color = "black", linetype = "dashed", size = 0.5) + #the estimated mean value for full sibs in the simulation
+  #geom_hline(aes(yintercept = 0.50), color = "darkgreen", linetype = "dashed", size = 0.7) + #the estimated mean value for parent offspring in the simulation
+  xlab(' ')+ylab("Mean Relatedness")+
+  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
+        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
+ggsave('diffbay_wAdults.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
+
 
 ######Inbreeding########
 # inbreeding  - you can put the values from the simulation in later. 
 ggplot(inbreed, aes(x = L3)) +
-  geom_histogram(binwidth = 0.005, color = "black", fill = "darkorange") +
+  geom_histogram(binwidth = 0.005, color = "light grey", fill = "light grey") +
   geom_vline(aes(xintercept = mean(LH, na.rm = TRUE)), #dark blue is the mean
-             color = "darkblue", linetype = "dashed", size = 1) +
+             color = "darkblue", linetype = "dashed", size = 0.5) +
   theme_cowplot()+
-  #geom_vline(aes(xintercept = 0.22), color = "green", linetype = "dashed", size = 1) + #the estimated mean value for half sibs in the simulation
-  #geom_vline(aes(xintercept = 0.48), color = "green", linetype = "dashed", size = 1) + #the estimated mean value for full sibs in the simulation
-  #geom_vline(aes(xintercept = 0.5), color = "green", linetype = "dashed", size = 1) + #the estimated mean value for parent offspring in the simulation
-  #geom_vline(aes(xintercept = 0.04),color = "purple", linetype = "dashed", size = 0.5) + #the Lynchrd 0.05 quantile on the simulated half sibs relationship
-  #geom_vline(aes(xintercept = quantile(LH, 0.95)), color = "darkred", linetype = "dashed", size = 1) + #red is the 0.95 quantile
   labs(x = "inbreeding coefficient (Fis)", y = "individuals") 
-#ggsave('inbreedld.png', width = 7, height = 7)
+ggsave('inbreedld.png', width = 7, height = 7)
 
 
-
+### Remove individuals that had super high relatedness, are they the same individual? think about removing them. 
+## I am not going to remove them because they're from the same bay and the'yre not out of the range of full sibs from the simulation (which is also from the data so..idk)
 
 ############### Now Do without the mattituck adults ###################
 #First remove the mattituck adults, because you don't want potential parents messing up the siblings relationship. 
@@ -159,12 +225,11 @@ setPop(wfpopLD) <-~Bay/Con/Year
 wfyoy <-popsub(wfpopLD, blacklist=c("Atl_Mt_3_2015","Atl_Mt_4_2015","Atl_Mt_5_2015","Atl_Mt_3_2016","Atl_Mt_4_2016","Atl_Mt_5_2016"))
 
 
-
 #convert to the right data format
 setPop(wfyoy) <-~Bay
 df <-genind2df(wfyoy, usepop = FALSE, oneColPerAll = TRUE) 
 df$Ind <- rownames(df)
-df <-df[,c(23,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22)]
+df <-df[,c(33,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32)]
 df[df=="NA"] <- 0 # missing data must be 0
 write.table(df, "scratchyoy",row.names = FALSE, col.names = FALSE, sep = "\t", quote = FALSE) #write it.
 genotypedata <- readgenotypedata("scratchyoy")# import input file as list (gdata, nloci, nalleles, ninds, freqs)
@@ -180,7 +245,7 @@ relatedn <- relatedness_lynchrd$relatedness %>%
 #not sure what's going on here. 
 library("readr")
 write_delim(relatedn, "pairwise_relatedness")
-# write inbreeding to file
+ #write inbreeding to file
 inbreed <- relatedness_lynchrd$inbreeding %>%
   dplyr::select(ind.id, L3, LH) %>%
   dplyr::rename(INDV = ind.id)
@@ -190,8 +255,8 @@ write_delim(inbreed, "inbreeding")
 #change bootstrap back to 100 because 1000 just takes too long. 
 cosim <-compareestimators(relatedness_lynchrd, ninds=100)
 cosim
-#ggsave("relatendess_simulation_yoyonly.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
-#dev.off()
+ggsave("relatendess_simulation_yoyonly.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+dev.off()
 
 
 #extract mean, median & CI values for relatedness from the simulation. 
@@ -201,27 +266,28 @@ relply
 
 # relatedness - remember to change these values depending on what dataset you are using. 
 ggplot(relatedn, aes(x = lynchrd)) +
-  geom_histogram(binwidth = 0.001, color = "black", fill = "darkorange") +
+  geom_histogram(binwidth = 0.001, color = "light grey", fill = "light grey") +
   geom_vline(aes(xintercept = mean(lynchrd, na.rm = TRUE)),
-             color = "darkblue", linetype = "dashed", size = 1) +
-  geom_vline(aes(xintercept = quantile(lynchrd, 0.95)),
-             color = "darkred", linetype = "dashed", size = 1) +
-  geom_vline(aes(xintercept = 0.27), color = "green", linetype = "dashed", size = 1) + #the estimated mean value for half sibs in the simulation
-  geom_vline(aes(xintercept = 0.49), color = "green", linetype = "dashed", size = 1) + #the estimated mean value for full sibs in the simulation
-  geom_vline(aes(xintercept = 0.04),color = "purple", linetype = "dashed", size = 0.5) + #the Lynchrd 0.05 quantile on the simulated half sibs relationship
-  geom_vline(aes(xintercept = 0.57), color = "darkred", linetype = "dashed", size = 1) + #red is the 0.95 quantile
+             color = "black", linetype = "dashed", size = 0.5) +
+  #geom_vline(aes(xintercept = quantile(lynchrd, 0.95)),
+  #color = "darkred", linetype = "dashed", size = 0.5) +
+  geom_vline(aes(xintercept = 0.23), color = "darkblue", linetype = "dashed", size = 0.7) + #the estimated mean value for half sibs in the simulation
+  geom_vline(aes(xintercept = 0.48), color = "darkred", linetype = "dashed", size = 0.7) + #the estimated mean value for full sibs in the simulation
+  #geom_vline(aes(xintercept = 0.49), color = "darkgreen", linetype = "dashed", size = 0.7) + #the estimated mean value for parent offspring in the simulation
+  #geom_vline(aes(xintercept = 0.08),color = "darkblue", linetype = "dotted", size = 0.5) + #the Lynchrd 0.05 quantile on the simulated half sibs relationship
+  #geom_vline(aes(xintercept = 0.49), color = "darkblue", linetype = "dotted", size = 0.5) + #red is the 0.95 quantile
   labs(x = "relatedness", y = "number of pairs")+
   theme_cowplot()
-#ggsave("pairwiserelatenessALL_11_yoy.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
-#dev.off()
+ggsave("pairwiserelatenessALL_20_yoy.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+dev.off()
 
 #attach strata information to the relatedness estimation. 
 h <-melt(relatedn, id=c("pair.no","ind1.id","ind2.id"))
 h <-dplyr::rename(h, Estimator=variable,Relatedness_Value=value)
 
 #how many of each? (based on estimator mean)
-filter(h,Relatedness_Value > 0.27 & Relatedness_Value <= 0.49) %>% n_distinct() #how many half sibs, 95
-filter(h,Relatedness_Value > 0.49) %>% n_distinct() #how many full sibs, 2
+filter(h,Relatedness_Value > 0.23 & Relatedness_Value <= 0.48) %>% n_distinct()
+filter(h,Relatedness_Value > 0.48) %>% n_distinct() 
 
 #create a dataset that combines fish pairs with information about their population
 popinfo <-dplyr::select(wfpop4df, Ind, Pop) %>% separate(Pop, c("Ocean","Bay","Con","Year"), remove=FALSE)
@@ -238,23 +304,23 @@ hs <-filter(hs,!is.na(Bay1))
 #find related fish from the same bay!
 same.bay <-filter(hs, Bay1==Bay2)
 #mean relatedness value of same bay pairs
-ddply(same.bay, ~Bay1, summarize, avr = mean(Relatedness_Value))
-filter(same.bay,Relatedness_Value >= 0.27 & Relatedness_Value <= 0.49) %>% n_distinct() #how many half sibs, 27 pairs
-filter(same.bay,Relatedness_Value > 0.49) %>% n_distinct() #how many full sibs, 2, 
+ddply(same.bay, ~Bay1, summarize, avr = mean(Relatedness_Value),sdrel =sd(Relatedness_Value),LCI = quantile(Relatedness_Value, 0.025), UCI= quantile(Relatedness_Value, 0.975))
+filter(same.bay,Relatedness_Value >= 0.23 & Relatedness_Value <= 0.48) %>% n_distinct() 
+filter(same.bay,Relatedness_Value > 0.48) %>% n_distinct()  
   #very high relatedness value between 14 & 18 in Napeague and between S55 and S58 in Shinnecock. You should probably remove those individuals. 
 
 
 #mean relatedness value of different bay pairs
 diff.bay <-filter(hs, Bay1!=Bay2)
-ddply(diff.bay, ~Bay1, summarize, avr = mean(Relatedness_Value))
-filter(diff.bay,Relatedness_Value >= 0.27 & Relatedness_Value < 0.49) %>% n_distinct() #how many half sibs, 69
-filter(diff.bay,Relatedness_Value > 0.49) %>% n_distinct() #how many full sibs 0
+ddply(diff.bay, Bay1~Bay2, summarize, avr = mean(Relatedness_Value),sdrel =sd(Relatedness_Value),LCI = quantile(Relatedness_Value, 0.025), UCI= quantile(Relatedness_Value, 0.975))
+filter(diff.bay,Relatedness_Value >= 0.23 & Relatedness_Value < 0.48) %>% n_distinct() 
+filter(diff.bay,Relatedness_Value > 0.48) %>% n_distinct() 
 
 #Shinnecock only
 shin.only <-filter(hs, Bay1=="Shin" & Bay2=="Shin")
-shin.halfsibs <-filter(shin.only, Relatedness_Value >= 0.27 & Relatedness_Value < 0.49) #half sibs. 
-shin.fullsibs <-filter(shin.only,  Relatedness_Value >= 0.49) #full sibs. 
-shin.sibs <-filter(shin.only, Relatedness_Value >= 0.27) #half or full
+shin.halfsibs <-filter(shin.only, Relatedness_Value >= 0.23 & Relatedness_Value < 0.48) #half sibs. 
+shin.fullsibs <-filter(shin.only,  Relatedness_Value >= 0.48) #full sibs. 
+shin.sibs <-filter(shin.only, Relatedness_Value >= 0.23) #half or full
 all_ssibs <- as.vector(rbind(shin.sibs$ind1.id, shin.sibs$ind2.id))
 n_distinct(all_ssibs) #how many individuals involved in at least one pair  #37, so some are involved in multiple pairs. 
 shinsibs <-unique(all_ssibs) #which individuals. 
