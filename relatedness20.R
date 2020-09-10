@@ -1,7 +1,7 @@
 ### Relatedness #####
 
 ## NOTES ##
-## includes only 12 loci for now.
+## includes 16 loci
 ## for no half 0 genotypes, use the double0 version of the files 
 ## population corrected for new cohort assignment
 ## based on the script "skreportdnaJAN_28_2020MATTITUCK.R"
@@ -19,30 +19,25 @@ library("related")
 library("cowplot")
 library('reshape2')
 
-
-
 #keeping everything in this folder
 setwd("/Users//tdolan/Documents//R-Github//WFmicrosats")
 
 ##### Formating the dataset #####
-wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrected12satsAug1920204genalex_doubl0.csv")
-wfpop4df <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrected_12_satsAug2020_doubl0.csv", header = TRUE) #csv version 
+wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_20_sept20204genalex_doubl0.csv")
 
-#create a second dataset that removes one loci in the WF27/WF33 pair 
-#go back to wfpop for this. 
+splitStrata(wfpop) <-~Ocean/Bay/Con/Year
+setPop(wfpop) <-~Bay
+
+### Format Data as in Microsats_20.R
 wfpopLD <-genclone2genind(wfpop)
 all_loci <- locNames(wfpopLD)# create vector of all loci
-removeloc <- c("WF27")# create vector containing loci to remove
+removeloc <- c("WF27","WF06","WF32")# create vector containing loci to remove
 keeploc <- setdiff(all_loci, removeloc)# create list of loci to keep
 wfpopLD <- wfpopLD[loc = keeploc]# filter loci in genind object
-length(locNames(wfpopLD))# check number of loci in genind obj
-
 #now re-remove the missing data. 
-info_table(wfpopLD, plot = TRUE, scaled =FALSE)
-wfpopLD <- wfpopLD %>% missingno("geno", cutoff=0.20) # remove samples that are > 20% missing
-#ggsave("20percutinfotable11LD.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
-#dev.off()
-
+wfpopLD <-wfpopLD %>% missingno("loci", cutoff=0.30) # removes loci where overall missingness > 30%, so WF01
+wfpopLD <- wfpopLD %>% missingno("geno", cutoff=0.25) # remove samples that are > 25% missing
+length(locNames(wfpopLD))# check number of loci in genind obj
 
 ######## Pairwise Relatedness (SIBLINGS ONLY) ######
 
@@ -53,14 +48,16 @@ wfpopLD <- wfpopLD %>% missingno("geno", cutoff=0.20) # remove samples that are 
 setPop(wfpopLD) <-~Bay
 df <-genind2df(wfpopLD, usepop = FALSE, oneColPerAll = TRUE) 
 df$Ind <- rownames(df)
-df <-df[,c(23,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22)]
+df <-df[,c(33,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32)]
 df[df=="NA"] <- 0 # missing data must be 0
 write.table(df, "scratch",row.names = FALSE, col.names = FALSE, sep = "\t", quote = FALSE) #write it.
 genotypedata <- readgenotypedata("scratch")# import input file as list (gdata, nloci, nalleles, ninds, freqs)
 
 # pairwise relatedness (Lynch & Ritland 1999)
-relatedness_lynchrd <- coancestry(genotypedata$gdata,
-                                  lynchrd = 1)
+relatedness_lynchrd <- coancestry(genotypedata$gdata,lynchrd = 2)
+
+#trioml estimate (Wang) - Can't do this because it crashes R studio. 
+#relatedness_triad <- coancestry(genotypedata$gdata,trioml = 2)
 
 # write relatedness to file
 relatedn <- relatedness_lynchrd$relatedness %>%
@@ -79,8 +76,8 @@ write_delim(inbreed, "inbreeding")
 #change bootstrap back to 100 because 1000 just takes too long. 
 cosim <-compareestimators(relatedness_lynchrd, ninds=100)
 cosim
-#ggsave("relatendess_simulation.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
-#dev.off()
+ggsave("relatendess_simulation.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+dev.off()
 
 
 #extract mean, median & CI values for relatedness from the simulation. 
