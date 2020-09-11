@@ -24,6 +24,7 @@ library("cowplot")
 library('readr')
 library("reshape2")
 library("strataG")
+library("viridis")
 
 #keeping everything in this folder
 setwd("/Users//tdolan/Documents//R-Github//WFmicrosats")
@@ -73,6 +74,8 @@ info_table(wfpopLD, plot = TRUE, scaled =FALSE)
 
 #HWE Heatmap#
 setPop(wfpopLD) <-~Bay
+hw.test(wfpopLD, B=1000) #permutation based
+hw.test(wfpopLD, B=0) #analytical p value
 wfhwe.pop <- seppop(wfpopLD) %>% lapply(hw.test)
 #write.csv(wfhwe.pop, file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/wfhwepop16.csv")
 (wfhwe.mat <- sapply(wfhwe.pop, "[", i = TRUE, j = 3)) # Take the third column with all rows ---> output this for supplementary tables.
@@ -86,21 +89,6 @@ levelplot(t(newmat),scales=list(x=list(rot=90)))
 #ggsave("HWEtest16.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
 #dev.off()
 
-#Test HWE over Con/Year
-#Test HWE over Year population
-setPop(wfpopLD) <-~Bay/Con/Year
-wfhwe.pop <- seppop(wfpopLD) %>% lapply(hw.test)
-write.csv(wfhwe.pop, file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/wfhwepop16BAYCONYEAR.csv")
-(wfhwe.mat <- sapply(wfhwe.pop, "[", i = TRUE, j = 3)) # Take the third column with all rows
-wfhw.mc <-sapply(wfhwe.pop, "[", i = TRUE, j = 4) #the PR exact based on the Monte carlo test! 
-wfhw.mc
-alpha  <- 0.05
-newmat <- wfhwe.mat
-newmat[newmat > alpha] <- 1
-levelplot(t(newmat),scales=list(x=list(rot=90)))#slightly different if you do it with genind object (which it calls for) instead of genclone.
-#ggsave("HWEtest20Bayconyear.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
-#dev.off()
-
 
 ### Summary Data ####
 setPop(wfpopLD) <-~Bay
@@ -110,6 +98,37 @@ barplot(toto$loc.n.all, ylab="Number of alleles",las=2,
 barplot(toto$Hexp-toto$Hobs, main="Heterozygosity: expected-observed",ylab="Hexp - Hobs",las=2, ylim=c(-0.05, 0.06))
 barplot(toto$n.by.pop, main="Sample sizes per population", ylab="Number of genotypes",las=3)
 toto
+hexhobs <-as.data.frame(toto$Hexp-toto$Hobs) 
+hexhobs <- tibble::rownames_to_column(hexhobs,"locus")
+names(hexhobs) <-c("locus","difference")
+
+#by bay
+hh <- seppop(wfpopLD) %>% lapply(summary)
+
+hhh <-function(hexp, hobs){
+  bayhet <-as.data.frame(hexp)%>% tibble::rownames_to_column("locus")
+  bayhobs <-as.data.frame(hobs)%>% tibble::rownames_to_column("locus")
+  bayhh <-left_join(bayhet, bayhobs, by=c("locus")) %>% mutate(hexhobs=hexp-hobs)
+  bayhh
+}
+naph <-hhh(hh$Nap$Hexp, hh$Nap$Hobs) %>% mutate(Bay="Nap")
+morh <-hhh(hh$Mor$Hexp, hh$Mor$Hobs) %>% mutate(Bay="Mor")
+Mth <-hhh(hh$Mt$Hexp, hh$Mt$Hobs) %>% mutate(Bay="Mt")
+jamh <-hhh(hh$Jam$Hexp, hh$Jam$Hobs) %>% mutate(Bay="Jam")
+shinh <-hhh(hh$Shin$Hexp, hh$Shin$Hobs) %>% mutate(Bay="Shin")
+h4 <- bind_rows(naph, morh, Mth, jamh, shinh)
+
+#heatmap of observed minus expected. 
+ggplot(h4, aes(x = locus, y = Bay, fill=hexhobs)) +
+  geom_tile(color = "black") +
+  geom_text(aes(label = round(hexhobs, 3)), color="grey") +
+  scale_fill_viridis(option="plasma") +
+  coord_fixed(ratio = 1) +
+  ylab("")+
+  #theme_standard() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+ggsave('hexhobsheat.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
+
 
 ##### Shannon's summary stats ########
 #https://gist.github.com/sjoleary/cdc32efbfd50c96eef446ebb7c2f2387
@@ -174,7 +193,7 @@ for (p in names(gen_grp)) {
 
 #here it is in one dataframe
 loc_stats <- plyr::ldply(loc_stats, data.frame) %>%
-  #select(-Hexp) %>%
+  select(-Hexp) %>%
   dplyr::rename(GRP = `.id`,
                 SIMPSON_IDX = `X1.D`,
                 N_ALLELES = allele,
@@ -191,6 +210,8 @@ for (p in names(gen_grp)) {
   loc_stats_2[[p]] <- stats$perloc %>%
     rownames_to_column("LOCUS")
 }
+#Ht and Hs are already the same at this point... 
+
 
 # combine into single data frame ====
 loc_stats_2 <- plyr::ldply(loc_stats_2, data.frame) %>%
@@ -201,7 +222,7 @@ loc_stats <- left_join(loc_stats, loc_stats_2) %>%
   filter(LOCUS != "mean")
 
 loc_stats[is.na(loc_stats)] <- NA
-#write.csv(loc_stats,file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/loc_stats16.csv")
+write.csv(loc_stats,file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/loc_stats16.csv")
 
 # write file with genetic diversity stats by locus to file
 #write_delim(loc_stats, "results/gendiv.locstats", delim = "\t")
@@ -209,15 +230,7 @@ loc_stats[is.na(loc_stats)] <- NA
 
 #create different loc stats groups for testing. 
 loc_stats_bay <-filter(loc_stats, GRP %in% c("Nap","Mor","Jam","Shin","Mt"))
-#loc_stats_BYC <-filter(loc_stats, GRP %in% c("Nap_6_2016","Mor_6_2016","Jam_6_2016","Shin_1_2016","Shin_2_2016","Mt_2_2015","Mt_1_2015","Mt_2_2016",  
- #                                            "Mt_1_2016","Mt_3_2015","Mt_4_2015","Mt_3_2016","Mt_4_2016","Shin_1_2017","Shin_2_2017")) #does not include MT 5 because we don't know what those individuals are. 
-#loc_stats_MT <-filter(loc_stats, GRP %in% c("Mt_2", "Mt_1", "Mt_3", "Mt_4")) #does not include MT 5 because we don't know what those individuals are. 
-#loc_stats_shin <-filter(loc_stats, GRP %in% c("Shin_1_2016", "Shin_2_2016","Shin_1_2017","Shin_2_2017"))
-#loc_stats_16 <-filter(loc_stats, GRP %in% c("Nap_2016","Mor_2016","Shin_2016","Mt_2016","Jam_2016"))
 
-#generic melt
-meltlocstats <-pivot_longer(loc_stats,cols = c("N_ALLELES", "SIMPSON_IDX", "EVENNESS","Ho","Hs","Ht","Fis","SHANNON_IDX","STODD_TAYLOR_IDX"),
-                                names_to="variable", values_to="value")
 #bay melt
 meltlocstats_bay <-pivot_longer(loc_stats_bay,cols = c("N_ALLELES", "SIMPSON_IDX", "EVENNESS","Ho","Hs","Ht","Fis","SHANNON_IDX","STODD_TAYLOR_IDX"),
                                 names_to="variable", values_to="value")
@@ -226,9 +239,28 @@ meltlocstats_bay <-pivot_longer(loc_stats_bay,cols = c("N_ALLELES", "SIMPSON_IDX
 meltlocstats2 <-filter(meltlocstats, GRP %in% c("Nap","Mor","Jam","Shin","Mt","ALL")) 
 #this is essentially by bay but also includes the "ALL" Group
 
+
+#we have some reason to distrust the fact that ht and hs are the same after shannons code but not globally. so we will also do this another way.
+#if you look at this, basic stats does not work at the subpopulation level and this could be why. 
+g2h_all <-genind2hierfstat(wfpopLD)
+g2hall <-basic.stats(g2h_all)
+global <-as.data.frame(g2hall$perloc) %>% tibble::rownames_to_column("locus") %>% mutate(Bay="ALL")
+write.csv(global,file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/basic_stats16.csv" )
+
+
+g2h_bay <-genind2hierfstat(wfpopLD, pop=wfpopLD@pop)
+
+wfshin <- popsub(wfpopLD, sublist=c("Shin"))  #%>% missingno("geno", cutoff=0.10)
+wfshinh <- genind2hierfstat(wfshin) 
+wfshi<-basic.stats(wfshinh)
+#wfshi <-diff_stats(wfshin)
+wfnap <- popsub(wfpopLD, sublist=c("Nap"))
+wfmor <- popsub(wfpopLD, sublist=c("mor"))
+
 ##### Box and whisker plots for diversity stats #####
 drabcolors <-c("#d0d1e6","#a6bddb", "#67a9cf", "#1c9099", "#016450")
 
+#Nei's gene diversity
 meltlocstats_bay %>%
   filter(variable == "Ht") %>%
   ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
@@ -241,6 +273,7 @@ meltlocstats_bay %>%
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
 ggsave('nei_bay.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
 
+#Inbreeding coefficient
 meltlocstats_bay %>%
   filter(variable == "Fis") %>%
   ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
@@ -253,6 +286,7 @@ meltlocstats_bay %>%
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
 ggsave('FIS_bay.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
 
+#Evenness
 meltlocstats_bay %>%
   filter(variable == "EVENNESS") %>%
   ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
@@ -265,6 +299,7 @@ meltlocstats_bay %>%
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
 ggsave('Evenness_bay.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
 
+#Shannon index
 meltlocstats_bay %>%
   filter(variable == "SHANNON_IDX") %>%
   ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
@@ -276,6 +311,32 @@ meltlocstats_bay %>%
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
 ggsave('Shannon_idxbay.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
+
+#Expected heterozygosity
+meltlocstats_bay %>%
+  filter(variable == "Hs") %>%
+  ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
+  geom_boxplot(aes(fill=GRP))+ 
+  scale_fill_manual(name = "Bay",values = drabcolors)+
+  coord_flip()+ 
+  #ylim(0.7,1.0)+
+  xlab(' ')+ylab("Expected Heterozygosity")+
+  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
+        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
+ggsave('Hsbay.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
+
+#Observed heterozygosity
+meltlocstats_bay %>%
+  filter(variable == "Ho") %>%
+  ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
+  geom_boxplot(aes(fill=GRP))+ 
+  scale_fill_manual(name = "Bay",values = drabcolors)+
+  coord_flip()+ 
+  #ylim(0.7,1.0)+
+  xlab(' ')+ylab("Observed Heterozygosity")+
+  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
+        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
+ggsave('Hobay.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
 
 
 ######## CALCULATE RAREFIED ALLELIC RICHNESS ----
@@ -400,7 +461,9 @@ ggsave('Fis.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_f
     #loc_stats_16 <- 2016 YOY at bay level. 
 
 #set level to test for friedmans
-fdata <- loc_stats_shin
+fdata <- loc_stats_bay
+
+
 ###Friedman's test for Global heterogeneity
 friedman.test(Hs~GRP | LOCUS, data= fdata) #Hs
 friedman.test(EVENNESS~GRP | LOCUS, data= fdata) #evenness
@@ -408,6 +471,8 @@ friedman.test(Ht~GRP | LOCUS, data= fdata) #Ht
 friedman.test(Fis~GRP | LOCUS, data= fdata) #Fis
 friedman.test(SHANNON_IDX~GRP | LOCUS, data= fdata) 
 friedman.test(value~variable | LOCUS, data= meltar3) #rareified alleles #come back to this one.... 
+
+
 
 #You could automate the test result extraction similar to how you did with the lm summary,,, but not right now. 
 
@@ -915,11 +980,11 @@ private_alleles(wfpop2)
 privateAlleles(wf.g2)
 
 #locus table
-locus_table(wfpop2)
+locus_table(wfpopLD)
 wflt.pair <- seppop(wfpop2) %>% lapply(locus_table) #by bay!
 
 #diversity boot
-mlgtab <-mlg.table(wfpop2)
+mlgtab <-mlg.table(wfpopLD)
 divboot <- diversity_boot(mlgtab, n=1000, H=TRUE, G=TRUE, lambda=TRUE, E5=TRUE)
 dci <-diversity_ci(wfpop2, n=10000, ci=95, plot=TRUE, center=TRUE, rarefy=FALSE, raw=TRUE)
 
@@ -929,7 +994,8 @@ dci <-diversity_ci(wfpop2, n=10000, ci=95, plot=FALSE, center=TRUE, rarefy=TRUE,
 
 
 #other stats
-otherstats<-diff_stats(wfpop2)
+library("mmod")
+otherstats<-diff_stats(wfpopLD)
 #plot it
 per.locus <- melt(otherstats$per.locus, varnames = c("Locus", "Statistic"))
 stats     <- c("Hs", "Ht", "Gst", "Gprime_st", "D", "D")
