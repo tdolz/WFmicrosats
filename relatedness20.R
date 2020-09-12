@@ -6,6 +6,11 @@
 ## population corrected for new cohort assignment
 ## based on the script "skreportdnaJAN_28_2020MATTITUCK.R"
 #install.packages(c("poppr", "mmod", "magrittr", "treemap"), repos = "http://cran.rstudio.com", dependencies = TRUE)
+
+
+##make a box and whisker plot where we have  mean same bay pair, mean outgroup for each bay multipe boxes in multipe colors
+# the color code shows the bay and the comparisons will  be demarcated.  Also Inbreeding on the same plot. 
+
 library('plyr')
 library("dplyr")
 library("poppr")

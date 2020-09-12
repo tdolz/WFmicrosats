@@ -222,7 +222,7 @@ loc_stats <- left_join(loc_stats, loc_stats_2) %>%
   filter(LOCUS != "mean")
 
 loc_stats[is.na(loc_stats)] <- NA
-write.csv(loc_stats,file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/loc_stats16.csv")
+#write.csv(loc_stats,file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/loc_stats16.csv")
 
 # write file with genetic diversity stats by locus to file
 #write_delim(loc_stats, "results/gendiv.locstats", delim = "\t")
