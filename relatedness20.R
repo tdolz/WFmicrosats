@@ -92,6 +92,25 @@ relsim <- as.data.frame(cosim$data)
 relply<- ddply(relsim, Estimator~relationship,summarize, mean.rel = mean(Relatedness_Value), LIrel = quantile(Relatedness_Value,0.05), HIrel = quantile(Relatedness_Value, 0.95), medianrel= quantile(Relatedness_Value, 0.5))
 relply
 
+#make your own boxplot of just lynch and ritland or whatever. 
+relsim %>%
+  filter(Estimator == "L & R") %>%
+  ggplot(aes(x=fct_rev(relationship),y=Relatedness_Value))+ 
+  geom_boxplot()+ 
+  xlab('relationship ')+ylab("Pairwise Relatedness")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
+        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
+ggsave('simulationLR.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
+
+
+
+
+
+
+
+
+
+
 # relatedness (LYNCHRD)- remember to change these values depending on what dataset you are using. 
 ggplot(relatedn, aes(x = lynchrd)) +
   geom_histogram(binwidth = 0.001, color = "light grey", fill = "light grey") +
