@@ -45,7 +45,7 @@ wfpopLD <-wfpopLD %>% missingno("loci", cutoff=0.30) # removes loci where overal
 wfpopLD <- wfpopLD %>% missingno("geno", cutoff=0.25) # remove samples that are > 25% missing
 length(locNames(wfpopLD))# check number of loci in genind obj
 
-######## Pairwise Relatedness (SIBLINGS ONLY) ######
+######## Pairwise Relatedness ######
 
 #There are many different estimators for relatedness. In previous scripts we have tried more robust ways. 
 # for now, Shannon's way. https://gist.github.com/sjoleary/3efd4a7d56b115fad319781298765a31
@@ -63,9 +63,9 @@ genotypedata <- readgenotypedata("scratch")# import input file as list (gdata, n
 relatedness_lynchrd <- coancestry(genotypedata$gdata,lynchrd = 1)
 
 #trioml estimate (Wang) - Can't do this because it crashes R studio. 
-relatedness_triad <- coancestry(genotypedata$gdata,trioml = 1)
-relatedT <- relatedness_triad$relatedness %>%
-  dplyr::select(pair.no, ind1.id, ind2.id, trioml)
+#relatedness_triad <- coancestry(genotypedata$gdata,trioml = 1)
+#relatedT <- relatedness_triad$relatedness %>%
+  #dplyr::select(pair.no, ind1.id, ind2.id, trioml)
 
 # write relatedness to file
 relatedn <- relatedness_lynchrd$relatedness %>%
@@ -74,20 +74,19 @@ relatedn <- relatedness_lynchrd$relatedness %>%
 #not sure what's going on here. 
 library("readr")
 write_delim(relatedn, "pairwise_relatedness")
+
 # write inbreeding to file
 inbreed <- relatedness_lynchrd$inbreeding %>%
   dplyr::select(ind.id, L3, LH) %>%
   dplyr::rename(INDV = ind.id)
 write_delim(inbreed, "inbreeding")
 
-#the simulation
+#the simulation --REMEMBER TO TURN OFF AND ON
 #change bootstrap back to 100 because 1000 just takes too long. 
 cosim <-compareestimators(relatedness_lynchrd, ninds=100)
 cosim
-ggsave("relatendess_simulation.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
-dev.off()
-
-
+#ggsave("relatendess_simulation.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+#dev.off()
 #extract mean, median & CI values for relatedness from the simulation. 
 relsim <- as.data.frame(cosim$data)
 relply<- ddply(relsim, Estimator~relationship,summarize, mean.rel = mean(Relatedness_Value), LIrel = quantile(Relatedness_Value,0.05), HIrel = quantile(Relatedness_Value, 0.95), medianrel= quantile(Relatedness_Value, 0.5))
@@ -100,9 +99,9 @@ ggplot(relatedn, aes(x = lynchrd)) +
              color = "black", linetype = "dashed", size = 0.5) +
   #geom_vline(aes(xintercept = quantile(lynchrd, 0.95)),
              #color = "darkred", linetype = "dashed", size = 0.5) +
-  geom_vline(aes(xintercept = 0.23), color = "darkblue", linetype = "dashed", size = 0.7) + #the estimated mean value for half sibs in the simulation
-  geom_vline(aes(xintercept = 0.48), color = "darkred", linetype = "dashed", size = 0.7) + #the estimated mean value for full sibs in the simulation
-  geom_vline(aes(xintercept = 0.47), color = "darkgreen", linetype = "dashed", size = 0.7) + #the estimated mean value for parent offspring in the simulation
+  geom_vline(aes(xintercept = 0.23), color = "darkblue", linetype = "dashed", size = 0.5) + #the estimated mean value for half sibs in the simulation
+  geom_vline(aes(xintercept = 0.48), color = "darkred", linetype = "dashed", size = 0.5) + #the estimated mean value for full sibs in the simulation
+  geom_vline(aes(xintercept = 0.47), color = "darkgreen", linetype = "dashed", size = 0.5) + #the estimated mean value for parent offspring in the simulation
   #geom_vline(aes(xintercept = 0.08),color = "darkblue", linetype = "dotted", size = 0.5) + #the Lynchrd 0.05 quantile on the simulated half sibs relationship
   #geom_vline(aes(xintercept = 0.49), color = "darkblue", linetype = "dotted", size = 0.5) + #red is the 0.95 quantile
   labs(x = "relatedness", y = "number of pairs")+
@@ -110,32 +109,16 @@ ggplot(relatedn, aes(x = lynchrd)) +
 #ggsave("pairwiserelatenessLYNCHRDALL_20.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
 #dev.off()
 
-# relatedness (TRIOML)- remember to change these values depending on what dataset you are using. 
-#does not look as good. 
-ggplot(relatedT, aes(x = trioml)) +
-  geom_histogram(binwidth = 0.0001, color = "light grey", fill = "light grey") +
-  geom_vline(aes(xintercept = mean(trioml, na.rm = TRUE)),
-             color = "black", linetype = "dashed", size = 0.5) +
-  #geom_vline(aes(xintercept = quantile(lynchrd, 0.95)),
-  #color = "darkred", linetype = "dashed", size = 0.5) +
-  geom_vline(aes(xintercept = 0.26), color = "darkblue", linetype = "dashed", size = 0.7) + #the estimated mean value for half sibs in the simulation
-  geom_vline(aes(xintercept = 0.50), color = "darkred", linetype = "dashed", size = 0.7) + #the estimated mean value for full sibs in the simulation
-  geom_vline(aes(xintercept = 0.50), color = "darkgreen", linetype = "dashed", size = 0.7) + #the estimated mean value for parent offspring in the simulation
-  #geom_vline(aes(xintercept = 0.09),color = "darkblue", linetype = "dotted", size = 0.5) + #the Lynchrd 0.05 quantile on the simulated half sibs relationship
-  #geom_vline(aes(xintercept = 0.44), color = "darkblue", linetype = "dotted", size = 0.5) + #red is the 0.95 quantile
-  labs(x = "relatedness", y = "number of pairs")+
-  theme_cowplot()
-#ggsave("pairwiserelatenessTRIOMLALL_20.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
-#dev.off()
-
-
 #attach strata information to the relatedness estimation. 
-h <-melt(relatedn, id=c("pair.no","ind1.id","ind2.id"))
-h <-dplyr::rename(h, Estimator=variable,Relatedness_Value=value)
+#h <-melt(relatedn, id=c("pair.no","ind1.id","ind2.id"))
+#h <-dplyr::rename(h, Estimator=variable,Relatedness_Value=value)
 
 #how many of each? (based on estimator mean)
-filter(h,Relatedness_Value > 0.23 & Relatedness_Value <= 0.49) %>% n_distinct() #how many half sibs
-filter(h,Relatedness_Value > 0.48) %>% n_distinct() #full sibs or parent offspring
+filter(relatedn,lynchrd > 0.23 & lynchrd <= 0.49) %>% n_distinct() #how many half sibs
+filter(relatedn, lynchrd > 0.48) %>% n_distinct() #full sibs or parent offspring
+n_distinct(relatedn)
+filter(relatedn, lynchrd <= 0.23) %>% n_distinct()
+filter(relatedn, lynchrd < 0.08) %>% n_distinct()
 
 #create a dataset that combines fish pairs with information about their population
 popinfo <-dplyr::select(wfpop4df, Ind, Pop) %>% separate(Pop, c("Ocean","Bay","Con","Year"), remove=FALSE)
@@ -190,7 +173,8 @@ diff.bay <-mutate(diff.bay, pair1 = pmin(Bay1,Bay2), pair2 =pmax(Bay1,Bay2)) %>%
   unite(BayPair, pair1,pair2, sep="-", remove=TRUE) %>% unique() 
   
 diff.bay %>%
-  ggplot(aes(x=fct_rev(BayPair),y=Relatedness_Value))+
+  #ggplot(aes(x=fct_rev(BayPair),y=Relatedness_Value))+ # bay pairs
+  ggplot(aes(x=fct_rev(Bay1),y=Relatedness_Value))+ # bay pairs
   #geom_boxplot(aes(fill=Bay1))+ 
   ggplot2::stat_summary(
     fun.data = mean_sdl,
@@ -198,8 +182,8 @@ diff.bay %>%
     geom = "pointrange",
     position = ggplot2::position_nudge(x = 0.05, y = 0)
   ) +coord_flip()+ 
-  geom_flat_violin(position = position_nudge(x = .1, y = 0),adjust=2, trim = FALSE, fill="light grey")+
-  #scale_fill_manual(name = "Bay",values = drabcolors)
+  geom_flat_violin(aes(fill=Bay1),position = position_nudge(x = .1, y = 0),adjust=2, trim = FALSE)+
+  scale_fill_manual(name = "Bay",values = drabcolors)+
   geom_hline(aes(yintercept = 0.26), color = "black", linetype = "dotted", size = 0.7) + #the estimated mean value for half sibs in the simulation
   geom_hline(aes(yintercept = 0.50), color = "black", linetype = "dashed", size = 0.5) + #the estimated mean value for full sibs in the simulation
   #geom_hline(aes(yintercept = 0.50), color = "darkgreen", linetype = "dashed", size = 0.7) + #the estimated mean value for parent offspring in the simulation
@@ -208,16 +192,90 @@ diff.bay %>%
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
 ggsave('diffbay_wAdults.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
 
+#in groups and out groups
+same.bay <-mutate(same.bay, io = "same")
+diff.bay <-mutate(diff.bay, io = "diff")
+inout <- bind_rows(same.bay, diff.bay)
+inout <-unite(inout, ioo, Bay1, io, sep="_", remove=FALSE)
+
+inout %>%
+  ggplot(aes(x=fct_rev(ioo),y=Relatedness_Value))+ # bay pairs
+  #geom_boxplot(aes(fill=Bay1))+ coord_flip()+
+  ggplot2::stat_summary(
+    fun.data = mean_sdl,
+    fun.args = list(mult = 1),
+    geom = "pointrange",
+    position = ggplot2::position_nudge(x = 0.05, y = 0)
+  ) +coord_flip()+ 
+  geom_flat_violin(aes(fill=Bay1),position = position_nudge(x = .1, y = 0),adjust=2, trim = FALSE)+
+  scale_fill_manual(name = "Bay",values = drabcolors)+
+  geom_hline(aes(yintercept = 0.21), color = "black", linetype = "dotted", size = 0.7) + #the estimated mean value for half sibs in the simulation
+  geom_hline(aes(yintercept = 0.07), color = "grey", linetype = "dotted", size = 0.7) + #the estimated mean value for half sibs in the simulation
+  geom_hline(aes(yintercept = 0.49), color = "grey", linetype = "dotted", size = 0.7) + #the estimated mean value for half sibs in the simulation
+  geom_hline(aes(yintercept = 0.47), color = "black", linetype = "dashed", size = 0.5) + #the estimated mean value for full sibs in the simulation
+  xlab(' ')+ylab("Mean Relatedness")+ 
+  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
+        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
+ggsave('inandoutgroups.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 8, height = 10)
+#it may be more appropriate to compare YOY only. 
+
+##overlaying histograms of same and different bays, you can see they are not different. 
+plot_multi_histogram <- function(df, feature, label_column) {
+  plt <- ggplot(df, aes(x=eval(parse(text=feature)), fill=eval(parse(text=label_column)))) +
+    geom_histogram(alpha=0.7, position="identity", aes(y = ..density..), color="black") +
+    geom_density(alpha=0.7) +
+    geom_vline(aes(xintercept=mean(eval(parse(text=feature)))), color="black", linetype="dashed", size=1) +
+    labs(x=feature, y = "Density")
+  plt + guides(fill=guide_legend(title=label_column))
+}
+plot_multi_histogram(inout, 'Relatedness_Value', 'io')
+
 
 ######Inbreeding########
 # inbreeding  - you can put the values from the simulation in later. 
 ggplot(inbreed, aes(x = L3)) +
   geom_histogram(binwidth = 0.005, color = "light grey", fill = "light grey") +
   geom_vline(aes(xintercept = mean(LH, na.rm = TRUE)), #dark blue is the mean
-             color = "darkblue", linetype = "dashed", size = 0.5) +
+             color = "black", linetype = "dashed", size = 0.5) +
   theme_cowplot()+
   labs(x = "inbreeding coefficient (Fis)", y = "individuals") 
-ggsave('inbreedld.png', width = 7, height = 7)
+ggsave('inbreedld.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+
+#inbreeding by bay. 
+wf.df <-dplyr::rename(wf.df, INDV=Ind)
+inbreed <-left_join(inbreed, wf.df, by="INDV")
+
+inbreed %>%
+  ggplot(aes(x=fct_rev(Bay),y=L3))+ 
+  #geom_boxplot(aes(fill=Bay))+ coord_flip()+
+  ggplot2::stat_summary(fun.data = mean_sdl,fun.args = list(mult = 1),geom = "pointrange",position = ggplot2::position_nudge(x = 0.05, y = 0)) +coord_flip()+ 
+  geom_flat_violin(aes(fill=Bay),position = position_nudge(x = .1, y = 0),adjust=2, trim = FALSE)+
+  geom_hline(aes(yintercept = mean(L3, na.rm = TRUE)),color = "black", linetype = "dashed", size = 0.5) +
+  scale_fill_manual(name = "Bay",values = drabcolors)+
+  xlab(' ')+ylab("Inbreeding Coefficient (Fis)")+ 
+  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
+        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
+ggsave('indvinbreeding.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 8, height = 10)
+#it may be more appropriate to compare YOY only. 
+
+## anova to compare relatedness
+library("agricolae")
+anorel <-lm(Relatedness_Value~io*Bay1, na.action=na.omit, data=inout)
+ano2 <-car::Anova(anorel)
+ano2
+df<-df.residual(anorel)
+MSerror<-deviance(anorel)/df
+comparison <- HSD.test(anorel,c("io","Bay1"),MSerror=MSerror, unbalanced=TRUE,alpha=0.05, group=TRUE)
+comparison
+
+## anova to compare inbreeding
+anoin <-lm(L3~Bay*Con, na.action=na.omit, data=inbreed)
+ano2 <-car::Anova(anoin)
+ano2
+df<-df.residual(anoin)
+MSerror<-deviance(anoin)/df
+comparison <- HSD.test(anoin,c("Bay","Con"),MSerror=MSerror, unbalanced=TRUE,alpha=0.05, group=TRUE)
+comparison
 
 
 ### Remove individuals that had super high relatedness, are they the same individual? think about removing them. 
