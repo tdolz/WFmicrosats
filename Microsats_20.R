@@ -904,21 +904,46 @@ colnames(coord.dist)<-c("x","y")
 #i'm not sure if it's ok to just put in your own euclidean distance matrix like this but it seems to work. 
 #previously i thought you had to attach it to the genpop objecte as $other, maybe as xy coordinates? 
 #I am not sure if it understands that it corresponds to population, but let's plot anyway? 
-Dgeo <-dist(coord.dist)
+Dgeo <-dist(coord.dist)  # this is a euclidean distance matrix for geographic coordinates but not a shortest distnce by sea measure. 
 
-ibd2 <-mantel.randtest(Dgen,Dgeo)
+#Create a distance matrix. This is the shortest distance by water in km from google earth
+#if you're going to input your own distance matrix, you have to make it an object of class dist. 
+short.dist <-data.frame(site.x=c("Mor","Jam","Shin","Mt","Jam","Shin","Mt","Shin","Mt","Mt"), 
+                        site.y=c("Nap","Nap","Nap","Nap","Mor","Mor","Mor","Jam","Jam","Shin"),
+                        Distance=c(74.01,195.2,58.16,56.82,109.04,13.28,144.21,132.07,161.5, 81.06))
+short.dist <-arrange(short.dist, site.x, site.y) #it's sorted... 
+
+#Create it as a matrix.
+coord.dist =matrix(c(),nrow=5,ncol=2,byrow=TRUE)
+colnames(coord.dist) <-c("Mor","Jam","Shin","Mt","Jam","Shin","Mt","Shin","Mt","Mt") #the x
+rownames(coord.dist)<-c("Nap","Nap","Nap","Nap","Mor","Mor","Mor","Jam","Jam","Shin") # the y
+
+
+#this does not create the right distance matrix... 
+#https://stackoverflow.com/questions/11343637/convert-a-dataframe-to-an-object-of-class-dist-without-actually-calculating-di
+Dgeo2 <- with(short.dist, Distance)
+nams <- with(short.dist, unique(c(as.character(site.x), as.character(site.y))))
+attributes(Dgeo2) <- with(short.dist, list(Size = length(nams),
+                                  Labels = nams,
+                                  Diag = FALSE,
+                                  Upper = FALSE,
+                                  method = "user"))
+class(Dgeo2) <- "dist"
+Dgeo2
+
+ibd2 <-mantel.randtest(Dgen,Dgeo2, nrepet=1000)
 ibd2
 plot(ibd2)
 library("MASS")
-dens <- kde2d(Dgeo,Dgen, n=300)
+dens <- kde2d(Dgeo2,Dgen, n=300)
 myPal <- colorRampPalette(c("white","blue","gold", "orange", "red"))
-plot(Dgeo, Dgen, xlab="distance (KM)", ylim= c(0.1, 0.5),ylab="genetic distance (euclidean)")
-#image(dens, col=transp(myPal(300),0.7), add=TRUE)
-abline(lm(Dgen~Dgeo))
-title("Isolation by distance")
+plot(Dgeo2, Dgen, xlab="distance (KM)", ylim= c(0.1, 0.5),ylab="genetic distance (euclidean)")
+image(dens, col=transp(myPal(300),0.5), add=TRUE)
+abline(lm(Dgen~Dgeo2))
 #strong looking pattern of IBD. 
 library("car")
-Anova(lm(Dgen~Dgeo))
+Anova(lm(Dgen~Dgeo2))
+summary(lm(Dgen~Dgeo2))
 
 
 
