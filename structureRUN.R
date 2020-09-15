@@ -7,11 +7,10 @@ library('plyr')
 library("dplyr")
 library("poppr")
 library("tidyr")
-library('purrr')
 library("ggplot2")
 library("adegenet")
 library("pegas")
-library("cowplot")
+library("strataG")
 
 #keeping everything in this folder
 setwd("/Users//tdolan/Documents//R-Github//WFmicrosats")
