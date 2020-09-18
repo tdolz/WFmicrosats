@@ -59,82 +59,116 @@ Mtcolors <-c("#f4d35e","#ee964b","#f95738","#ee4266","#15616d","#0d3b66")
 
 #### Clustering ####
 ####DAPC USE THIS ONE####
-#http://adegenet.r-forge.r-project.org/files/tutorial-dapc.pdf
-#this is a NEW DAPC, which I am pretty sure is NOT using prior group assignment. 
+  #http://adegenet.r-forge.r-project.org/files/tutorial-dapc.pdf
+  #this is a NEW DAPC, which I am pretty sure is NOT using prior group assignment. 
+
+#optim.a.score <-choosing the right number of PC to retain. 
+  # overfitting is very possible and will result in even randomize groups being 100% assigned. 
+  # use the A score to optimize the number of pc to choose. 
+
+# Assignplot <- check how well the DAPC is consistent with the original clusters
+  #only do a subset of individuals (say 40 at a time) or the plot will be unreadable.
+# compoplot <- make a structure-like plot
+  #(dapc1, posi="bottomright",
+  # a blue cross is the original population, a red shade means high probability according to assingment. 
+  # so a blue cross on top of a red box is a good thing. 
+
+#####BAY#####
 setPop(wfpopLD) <-~Bay
 bay_dapc <- dapc(wfpopLD, n.pca = 150, n.da = 2) 
+#how many clusters
+as <- optim.a.score(bay_dapc)
+ggsave("bayclust_optim.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+dev.off()
+#PC plots
 scatter(bay_dapc, posi.da="topleft",scree.pca=TRUE,posi.pca="topright",col=drabcolors,legend=FALSE,solid=1.0) #adjust the solidity value for better plots. 
-ggsave("bayclust_150pC_2.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+ggsave("bayclust_150pC_2.png", path="/Users//tdolan//Documents//WIP research//microsats//microsat_figs")
 dev.off()
 scatter(bay_dapc,1,1, bg="white", scree.da=FALSE, legend=TRUE, solid=.4,col=drabcolors,)
 ggsave("bayclust_150pC_1.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
 dev.off()
+#check assignments
+assignplot(bay_dapc)
+ggsave("bayclust_assignments.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", height=20, width =5)
+dev.off()
+#make a structure-like plot
+compoplot(bay_dapc, posi="bottomright", txt.leg=paste("Cluster", 1:4), lab="",ncol=1, xlab="individuals", col=drabcolors)
+ggsave("bayclust_strucplot.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+dev.off()
+#which are our most admixed individuals? (no more than 50% probability of membership to any group)
+temp <- which(apply(bay_dapc$posterior,1, function(e) all(e<0.50)));temp
+#plot admixed individuals
+compoplot(bay_dapc, subset=temp, show.lab=TRUE, posi="bottomright", txt.leg=paste("Cluster", 1:4),ncol=2, col=drabcolors)
 
-#yoy 2016 only. 
+
+
+
+
+
+
+######yoy 2016 only#######
 setPop(wfyoy16) <-~Bay
 yoy_dapc <- dapc(wfyoy16, n.pca = 150, n.da = 2) 
+#how many clusters
+as <- optim.a.score(yoy_dapc)
+ggsave("yoyclust_optim.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+dev.off()
+#plots
 scatter(yoy_dapc, posi.da="bottomright",scree.pca=TRUE,posi.pca="bottomleft", possub="bottomleft", legend=TRUE, col=drabcolors)
 ggsave("yoy16clust_150pC_2dc.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
 dev.off()
 scatter(yoy_dapc,1,1, bg="white", scree.da=FALSE, legend=TRUE, solid=.4,col=drabcolors,)
 ggsave("yoy16clust_150pC_1.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
 dev.off()
+#check assignments
+assignplot(bay_dapc, subset=161:197)
 
-#Shin cohorts
+
+#######Shin cohorts#######
 setPop(shinco) <-~Bay/Con/Year
 shin_dapc <- dapc(shinco, n.pca = 70, n.da = 2) 
+#how many clusters
+as <- optim.a.score(shin_dapc)
+ggsave("shinclust_optim.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+dev.off()
+#plots
 scatter(shin_dapc, posi.da="bottomright",scree.pca=TRUE,posi.pca="bottomleft",solid=1.0, posi.leg="topleft",possub="bottomleft", legend=TRUE, col=shincolors)
 ggsave("shincoClust_70pC_2dc.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
 dev.off()
 scatter(shin_dapc,1,1, bg="white", scree.da=FALSE, legend=TRUE, solid=.4,col=shincolors)
 ggsave("shinclust_150pC_1.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
 dev.off()
+#check assignments
+assignplot(bay_dapc, subset=161:197)
+
+
 
 #Mt cohorts - bay con year
 setPop(mtco) <-~Bay/Con/Year
 mt_dapc <- dapc(mtco, n.pca = 100, n.da = 2) 
+#how many clusters
+as <- optim.a.score(mt_dapc)
+ggsave("mtclust_optim.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+dev.off()
+#plots
 scatter(mt_dapc, posi.da="topright",scree.pca=TRUE,posi.pca="bottomleft",solid=1.0, posi.leg="topleft",possub="bottomleft", legend=TRUE, col=Mtcolors)
 ggsave("mtClust_100pC_2dc.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
 dev.off()
-
-
-#choosing the right number of PC to retain. 
-# overfitting is very possible and will result in even randomize groups being 100% assigned. 
-# use the A score to optimize the number of pc to choose. 
-as <- optim.a.score(bay_dapc)
-ggsave("bayclust_optim.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+scatter(mt_dapc,1,1, bg="white", scree.da=FALSE, legend=TRUE, solid=.4,col=Mtcolors)
+ggsave("Mtclust_100pC_1.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
 dev.off()
-#suggests retaining about 150 PC, which is what we previously did.  
-
-
-bov_dapc2 <- dapc(wfpop4, n.pca = 70, n.da = 4) 
-scatter(bov_dapc2, posi.da="bottomright",scree.pca=TRUE,posi.pca="bottomleft")
-#honestly it doesn't look as good! 
-
-scatter(bov_dapc,1,1, bg="white",
-        scree.da=FALSE, legend=TRUE, solid=.4)
-
-#check how well the DAPC is consistent with the original clusters
-#only do a subset of individuals (say 40 at a time) or the plot will be unreadable.
-# compoplot(dapc1, posi="bottomright",
-# a blue cross is the original population, a red shade means high probability according to assingment. 
-# so a blue cross on top of a red box is a good thing. 
-assignplot(bov_dapc, subset=161:197)
-
-#make a structure-like plot
-compoplot(bov_dapc, posi="bottomright")#,
-# txt.leg=paste("Cluster", 1:4), lab="",ncol=1, 
-#xlab="individuals", col=funky(4))
+#check assignments
+assignplot(bay_dapc, subset=161:197)
 
 
 
-#which are our most admixed individuals? (no more than 50% probability of membership to any group)
-temp <- which(apply(bov_dapc$posterior,1, function(e) all(e<0.50)))
-temp
-## so many of them...
-compoplot(bov_dapc, subset=temp, show.lab=TRUE, posi="bottomright")# posi="bottomright",
-#txt.leg=paste("Cluster", 1:4),
-#ncol=2, col=funky(4))
+
+
+
+
+
+
+
 
 #need to K fold cross-validate the DAPC. but having a really hard time with this one.... 
 library("gtools")
