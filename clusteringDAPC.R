@@ -21,43 +21,91 @@ setwd("/Users//tdolan/Documents//R-Github//WFmicrosats")
 
 
 ##### Formating the dataset #####
-wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrected12satsAug1920204genalex.csv")
-wfpop4df <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrected_12_satsAug2020.csv", header = TRUE) #csv version 
+# We are going to use the doubl0 version. 
+wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_20_sept20204genalex_doubl0ABC.csv")
 
 splitStrata(wfpop) <-~Ocean/Bay/Con/Year
 setPop(wfpop) <-~Bay
 
-#create a second dataset that removes one loci in the WF27/WF33 pair 
-#go back to wfpop for this. 
+#clean the dataset
 wfpopLD <-genclone2genind(wfpop)
 all_loci <- locNames(wfpopLD)# create vector of all loci
-removeloc <- c("WF27")# create vector containing loci to remove
+removeloc <- c("WF27","WF06","WF32")# create vector containing loci to remove
 keeploc <- setdiff(all_loci, removeloc)# create list of loci to keep
 wfpopLD <- wfpopLD[loc = keeploc]# filter loci in genind object
+wfpopLD <-wfpopLD %>% missingno("loci", cutoff=0.30) # removes loci where overall missingness > 30%, so WF01
+wfpopLD <- wfpopLD %>% missingno("geno", cutoff=0.25) # remove samples that are > 25% missing
 length(locNames(wfpopLD))# check number of loci in genind obj
-#now re-remove the missing data. 
-info_table(wfpopLD, plot = TRUE, scaled =FALSE)
-wfpopLD <- wfpopLD %>% missingno("geno", cutoff=0.20) # remove samples that are > 20% missing
 
+#create a dataset that is just 2016 YOY only. 
+setPop(wfpopLD) <-~Ocean/Bay/Con/Year
+wfyoy16 <-popsub(wfpopLD, blacklist=c("Atl_Mt_3_both","Atl_Mt_4_both","Atl_Mt_5_2015","Atl_Mt_5_2016","Atl_Shin_1_2017","Atl_Shin_2_2017","Atl_Mt_1_2015","Atl_Mt_2_2015"))
+
+#shinnecock only database
+setPop(wfpopLD) <-~Bay
+shinco <-popsub(wfpopLD, sublist=c("Shin"))
+setPop(shinco) <-~Bay/Con/Year
+
+#mattituck only database, exclude MT_5
+setPop(wfpopLD) <-~Bay/Con
+mtco <-popsub(wfpopLD, sublist=c("Mt_1","Mt_2","Mt_3","Mt_4"))
+setPop(mtco) <-~Bay/Con/Year
+
+#colorschemes
+drabcolors <-c("#d0d1e6","#a6bddb", "#67a9cf", "#1c9099", "#016450")
+shincolors <-c("#95d5b2","#52b788","#2d6a4f","#081c15")
+Mtcolors <-c("#f4d35e","#ee964b","#f95738","#ee4266","#15616d","#0d3b66")
 
 
 #### Clustering ####
 ####DAPC USE THIS ONE####
-#I am not sure where wfpop4 came from.... couldn't find the origin of it in the skreportdnaJAN_28_2020MATTITUCK script. 
-#this is a NEW DAPC, which I am pretty sure is NOT using prior group assignment. 
-#which is what we want. 
-bov_dapc <- dapc(wfpop4, n.pca = 100, n.da = 4) # 100 principal components; 4 discriminant functions,  n.pca = 100, n.da = 4
-scatter(bov_dapc, posi.da="bottomright",scree.pca=TRUE,posi.pca="bottomleft")
-### This looks great!!!! 
 #http://adegenet.r-forge.r-project.org/files/tutorial-dapc.pdf
+#this is a NEW DAPC, which I am pretty sure is NOT using prior group assignment. 
+setPop(wfpopLD) <-~Bay
+bay_dapc <- dapc(wfpopLD, n.pca = 150, n.da = 2) 
+scatter(bay_dapc, posi.da="topleft",scree.pca=TRUE,posi.pca="topright",col=drabcolors,legend=FALSE,solid=1.0) #adjust the solidity value for better plots. 
+ggsave("bayclust_150pC_2.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+dev.off()
+scatter(bay_dapc,1,1, bg="white", scree.da=FALSE, legend=TRUE, solid=.4,col=drabcolors,)
+ggsave("bayclust_150pC_1.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+dev.off()
+
+#yoy 2016 only. 
+setPop(wfyoy16) <-~Bay
+yoy_dapc <- dapc(wfyoy16, n.pca = 150, n.da = 2) 
+scatter(yoy_dapc, posi.da="bottomright",scree.pca=TRUE,posi.pca="bottomleft", possub="bottomleft", legend=TRUE, col=drabcolors)
+ggsave("yoy16clust_150pC_2dc.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+dev.off()
+scatter(yoy_dapc,1,1, bg="white", scree.da=FALSE, legend=TRUE, solid=.4,col=drabcolors,)
+ggsave("yoy16clust_150pC_1.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+dev.off()
+
+#Shin cohorts
+setPop(shinco) <-~Bay/Con/Year
+shin_dapc <- dapc(shinco, n.pca = 70, n.da = 2) 
+scatter(shin_dapc, posi.da="bottomright",scree.pca=TRUE,posi.pca="bottomleft",solid=1.0, posi.leg="topleft",possub="bottomleft", legend=TRUE, col=shincolors)
+ggsave("shincoClust_70pC_2dc.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+dev.off()
+scatter(shin_dapc,1,1, bg="white", scree.da=FALSE, legend=TRUE, solid=.4,col=shincolors)
+ggsave("shinclust_150pC_1.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+dev.off()
+
+#Mt cohorts - bay con year
+setPop(mtco) <-~Bay/Con/Year
+mt_dapc <- dapc(mtco, n.pca = 100, n.da = 2) 
+scatter(mt_dapc, posi.da="topright",scree.pca=TRUE,posi.pca="bottomleft",solid=1.0, posi.leg="topleft",possub="bottomleft", legend=TRUE, col=Mtcolors)
+ggsave("mtClust_100pC_2dc.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+dev.off()
 
 
 #choosing the right number of PC to retain. 
 # overfitting is very possible and will result in even randomize groups being 100% assigned. 
 # use the A score to optimize the number of pc to choose. 
-as <- optim.a.score(bov_dapc)
-#suggests retaining about 54 PC. 
-# this varies so much each run. i don't think it's correct or reliable. 
+as <- optim.a.score(bay_dapc)
+ggsave("bayclust_optim.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+dev.off()
+#suggests retaining about 150 PC, which is what we previously did.  
+
 
 bov_dapc2 <- dapc(wfpop4, n.pca = 70, n.da = 4) 
 scatter(bov_dapc2, posi.da="bottomright",scree.pca=TRUE,posi.pca="bottomleft")
