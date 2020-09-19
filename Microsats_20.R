@@ -75,6 +75,7 @@ info_table(wfpopLD, plot = TRUE, scaled =FALSE)
 #HWE Heatmap#
 setPop(wfpopLD) <-~Bay
 hw.test(wfpopLD, B=1000) #permutation based
+hw.test(wfpop2CLEAN, B=1000)
 hw.test(wfpopLD, B=0) #analytical p value
 wfhwe.pop <- seppop(wfpopLD) %>% lapply(hw.test)
 #write.csv(wfhwe.pop, file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/wfhwepop16.csv")
