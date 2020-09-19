@@ -48,7 +48,7 @@ info_table(wfpop, plot = TRUE, scaled =FALSE)
 wfpop2CLEAN <- wfpop %>% missingno("geno", cutoff=0.0)
 setPop(wfpop2CLEAN) <-~Bay
 wfia.pair <-wfpop2CLEAN %>% clonecorrect(strata= ~Bay) %>% pair.ia(quiet=FALSE)
-#wfia.pair <- seppop(wfpop2CLEAN) %>% lapply(pair.ia) #by bay!
+wfia.pair <- seppop(wfpop2CLEAN) %>% lapply(pair.ia) #by bay!
 #ggsave("rawLD20.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
 #dev.off()
 
@@ -73,6 +73,7 @@ info_table(wfpopLD, plot = TRUE, scaled =FALSE)
 #dev.off()
 
 #HWE Heatmap#
+setPop(wfpopLD) <- ~Ocean
 setPop(wfpopLD) <-~Bay
 hw.test(wfpopLD, B=1000) #permutation based
 hw.test(wfpop2CLEAN, B=1000)
