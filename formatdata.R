@@ -27,5 +27,10 @@ names(allele2) <-c("Ind","Pop","J42", "WF22","PAM27","PAM79","WF27","WF16", "WF3
 microdrop <-full_join(allele1,allele2)
 microdrop <-arrange(microdrop, Ind)
 microdrop[microdrop=="0"] <- -9 # missing data must be -9
+microdrop[microdrop=="NA"]<- -9
+
+#check for places where one allele is filled in an the other isn't
+check <-filter(microdrop, WF27=="-9")%>%count(Ind); filter(check, n < 2)
+#WF27 was the only problematic one before, and we eliminated that loci in our previous analysis. 
 
 write_delim(microdrop, "microdrop_datafile")
