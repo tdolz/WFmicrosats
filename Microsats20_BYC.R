@@ -41,7 +41,8 @@ setPop(wfpop) <-~Bay
 #remove the same loci as before. 
 wfpopLD <-genclone2genind(wfpop)
 all_loci <- locNames(wfpopLD)# create vector of all loci
-removeloc <- c("WF27","WF06","WF32")# create vector containing loci to remove
+#removeloc <- c("WF27","WF06","WF32")# create vector containing loci to remove
+removeloc <- c("WF27")# create vector containing loci to remove
 keeploc <- setdiff(all_loci, removeloc)# create list of loci to keep
 wfpopLD <- wfpopLD[loc = keeploc]# filter loci in genind object
 length(locNames(wfpopLD))# check number of loci in genind obj

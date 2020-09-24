@@ -91,7 +91,7 @@ levelplot(t(newmat),scales=list(x=list(rot=90)))
 #ggsave("HWEtest16.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
 #dev.off()
 
-##### Compare to using 18 microsats ####
+##### Compare to using 18  microsats ####
 wfpop18 <-genclone2genind(wfpop)
 all_loci <- locNames(wfpop18)# create vector of all loci
 removeloc <- c("WF27")# create vector containing loci to remove
@@ -105,11 +105,12 @@ wfpop18 <-wfpop18 %>% missingno("loci", cutoff=0.30) # removes loci where overal
 wfpop18 <- wfpop18 %>% missingno("geno", cutoff=0.25) # remove samples that are > 25% missing
 
 #now re-do HW test
-setPop(wfpop18) <-~Ocean
+setPop(wfpop18) <-~Bay
 hw.test(wfpop18, B=1000) #permutation based
 hw.test(wfpop18, B=0) #analytical p value
 wfhwe.pop18 <- seppop(wfpop18) %>% lapply(hw.test)
-wfhwe.pop18 <- hw.test(wfpop18)
+#write.csv(wfhwe.pop, file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/wfhwepop18.csv")
+(wfhwe.mat <- sapply(wfhwe.pop18, "[", i = TRUE, j = 3)) # Take the third column with all rows ---> output this for supplementary tables.
 wfhw.mc <-sapply(wfhwe.pop18, "[", i = TRUE, j = 4) #the PR exact based on the Monte carlo test! ----> p.values on the hw.test
 wfhw.mc  # this is just the p values. 
 alpha  <- 0.05
@@ -118,10 +119,38 @@ newmat[newmat > alpha] <- 1 #where the p value on the chi square is greater than
 # so pink means zero, which means p < 0.05, which means out of HWE. 
 levelplot(t(newmat),scales=list(x=list(rot=90)))
 
+##### Compare to using 17  microsats ####
+wfpop17 <-genclone2genind(wfpop)
+all_loci <- locNames(wfpop17)# create vector of all loci
+removeloc <- c("WF27", "WF06")# create vector containing loci to remove
+keeploc <- setdiff(all_loci, removeloc)# create list of loci to keep
+wfpop17 <- wfpop17[loc = keeploc]# filter loci in genind object
+length(locNames(wfpop17))# check number of loci in genind obj. 
+setPop(wfpop17) <-~Bay
+wfpop17 <-wfpop17 %>% missingno("loci", cutoff=0.30) # removes loci where overall missingness > 30%, so WF01
+wfpop17 <- wfpop17 %>% missingno("geno", cutoff=0.25) # remove samples that are > 25% missing
+setPop(wfpop17) <-~Bay
+hw.test(wfpop17, B=1000) #permutation based
+hw.test(wfpop17, B=0) #analytical p value
+wfhwe.pop17 <- seppop(wfpop17) %>% lapply(hw.test)
+#write.csv(wfhwe.pop, file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/wfhwepop17.csv")
+(wfhwe.mat <- sapply(wfhwe.pop17, "[", i = TRUE, j = 3)) # Take the third column with all rows ---> output this for supplementary tables.
+wfhw.mc <-sapply(wfhwe.pop17, "[", i = TRUE, j = 4) #the PR exact based on the Monte carlo test! ----> p.values on the hw.test
+wfhw.mc  # this is just the p values. 
+alpha  <- 0.05
+newmat <- wfhwe.mat
+newmat[newmat > alpha] <- 1 #where the p value on the chi square is greater than 0.05, give it a 1.
+levelplot(t(newmat),scales=list(x=list(rot=90)))
+
+#make a graph comparing. 16, 17, 18, microsatellites
+hw16 <-as.data.frame(wfhwe.pop) %>% mutate(numloci="16")
+hw17 <-as.data.frame(wfhwe.pop17) %>% mutate(numloci="17")
+hw18 <-as.data.frame(wfhwe.pop18) %>% mutate(numloci="18")
+hwpops <-bind_rows(hw16,hw17,hw18)
 
 
-
-
+############ CHANGE THIS HERE ################
+wfpopLD <- wfpop17
 
 
 ### Summary Data ####
@@ -129,7 +158,7 @@ setPop(wfpopLD) <-~Bay
 toto <-summary(wfpopLD)
 barplot(toto$loc.n.all, ylab="Number of alleles",las=2,
         main="Number of alleles per locus")
-barplot(toto$Hexp-toto$Hobs, main="Heterozygosity: expected-observed",ylab="Hexp - Hobs",las=2, ylim=c(-0.05, 0.06))
+barplot(toto$Hexp-toto$Hobs, main="Heterozygosity: expected-observed",ylab="Hexp - Hobs",las=2, ylim=c(-0.05, 0.25))
 barplot(toto$n.by.pop, main="Sample sizes per population", ylab="Number of genotypes",las=3)
 toto
 hexhobs <-as.data.frame(toto$Hexp-toto$Hobs) 
@@ -180,7 +209,8 @@ setPop(wfpopLD) <- ~Bay/Con/Year
 df <-genind2df(wfpopLD, usepop = TRUE, oneColPerAll = TRUE) 
 df$Ind <- rownames(df)
  #reorder so that the first column has to be the sample name. 
-df <-df[,c(34,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33)]
+#df <-df[,c(34,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33)] #16 loci
+df <-df[,c(36,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35)] #17 loci
 df[df=="NA"] <- 0 # missing data must be 0
 SampleInfo <- dplyr::select(df, Ind, pop)
 SampleInfo <- separate(SampleInfo, pop, c("Bay","Con","Year"))
@@ -279,7 +309,7 @@ meltlocstats2 <-filter(meltlocstats, GRP %in% c("Nap","Mor","Jam","Shin","Mt","A
 g2h_all <-genind2hierfstat(wfpopLD)
 g2hall <-basic.stats(g2h_all)
 global <-as.data.frame(g2hall$perloc) %>% tibble::rownames_to_column("locus") %>% mutate(Bay="ALL")
-write.csv(global,file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/basic_stats16.csv" )
+#write.csv(global,file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/basic_stats16.csv" )
 
 
 g2h_bay <-genind2hierfstat(wfpopLD, pop=wfpopLD@pop)
@@ -305,7 +335,7 @@ meltlocstats_bay %>%
   xlab(' ')+ylab("Nei's Gene Diversity")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('nei_bay.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
+#ggsave('nei_bay.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
 
 #Inbreeding coefficient
 meltlocstats_bay %>%
@@ -318,7 +348,7 @@ meltlocstats_bay %>%
   xlab(' ')+ylab("Fis")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('FIS_bay.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
+#ggsave('FIS_bay17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
 
 #Evenness
 meltlocstats_bay %>%
@@ -719,9 +749,12 @@ ggsave('rariefied_allelesBaytile.png',path="/Users/tdolan/Documents/WIP research
 ##### FST ######
 
 #Weir and Cockheram FST global & pairwise. - probably your best bet. 
+
+wfpopLD <-wfpop17
+
 setPop(wfpopLD) <-~Bay
 wf.g2 <-genind2gtypes(wfpopLD)
-statFst(wf.g)
+statFst(wf.g2)
 #popStruct <- popStructTest(wf.g2, stats = c(statFst, statFstPrime), nrep = 1000, quietly = TRUE)
 popStruct <- popStructTest(wf.g2, nrep = 1000, quietly = FALSE)
 popStruct
