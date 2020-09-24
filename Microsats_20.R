@@ -79,7 +79,7 @@ hw.test(wfpopLD, B=1000) #permutation based
 hw.test(wfpop2CLEAN, B=1000)
 hw.test(wfpopLD, B=0) #analytical p value
 wfhwe.pop <- seppop(wfpopLD) %>% lapply(hw.test)
-#write.csv(wfhwe.pop, file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/wfhwepop16.csv")
+write.csv(wfhwe.pop, file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/wfhwepop16.csv")
 (wfhwe.mat <- sapply(wfhwe.pop, "[", i = TRUE, j = 3)) # Take the third column with all rows ---> output this for supplementary tables.
 wfhw.mc <-sapply(wfhwe.pop, "[", i = TRUE, j = 4) #the PR exact based on the Monte carlo test! ----> p.values on the hw.test
 wfhw.mc  # this is just the p values. 
@@ -90,6 +90,38 @@ newmat[newmat > alpha] <- 1 #where the p value on the chi square is greater than
 levelplot(t(newmat),scales=list(x=list(rot=90)))
 #ggsave("HWEtest16.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
 #dev.off()
+
+##### Compare to using 18 microsats ####
+wfpop18 <-genclone2genind(wfpop)
+all_loci <- locNames(wfpop18)# create vector of all loci
+removeloc <- c("WF27")# create vector containing loci to remove
+keeploc <- setdiff(all_loci, removeloc)# create list of loci to keep
+wfpop18 <- wfpop18[loc = keeploc]# filter loci in genind object
+length(locNames(wfpop18))# check number of loci in genind obj
+
+#now re-remove the missing data. 
+setPop(wfpop18) <-~Bay
+wfpop18 <-wfpop18 %>% missingno("loci", cutoff=0.30) # removes loci where overall missingness > 30%, so WF01
+wfpop18 <- wfpop18 %>% missingno("geno", cutoff=0.25) # remove samples that are > 25% missing
+
+#now re-do HW test
+setPop(wfpop18) <-~Ocean
+hw.test(wfpop18, B=1000) #permutation based
+hw.test(wfpop18, B=0) #analytical p value
+wfhwe.pop18 <- seppop(wfpop18) %>% lapply(hw.test)
+wfhwe.pop18 <- hw.test(wfpop18)
+wfhw.mc <-sapply(wfhwe.pop18, "[", i = TRUE, j = 4) #the PR exact based on the Monte carlo test! ----> p.values on the hw.test
+wfhw.mc  # this is just the p values. 
+alpha  <- 0.05
+newmat <- wfhwe.mat
+newmat[newmat > alpha] <- 1 #where the p value on the chi square is greater than 0.05, give it a 1.
+# so pink means zero, which means p < 0.05, which means out of HWE. 
+levelplot(t(newmat),scales=list(x=list(rot=90)))
+
+
+
+
+
 
 
 ### Summary Data ####
