@@ -16,6 +16,7 @@ library('ggrepel')
 mtage <-read.csv(file="mtcohortreassignAug182020.csv", header=TRUE)
 mtage <-mutate(mtage, bday=as.Date(hatch.date), cohort=as.factor(new.cohort)) %>%slice(1:49)
 allmelt <-read.csv(file="allmeltdec2019.csv", header=TRUE)
+spawndate <-read.csv(file="mtspawndate.csv", header=TRUE)
 
 mtage %>%
   #ggplot(aes(x=bday, y=n_distinct(samp)))+ #turn off cohort sorting
@@ -28,7 +29,7 @@ mtage %>%
                    point.padding = 0.5,
                    segment.color = 'grey50')+
   scale_x_date(date_breaks="1 week",date_labels = ("%Y-%m-%d"),)+
-  xlab("settlement (maybe hatch) date")+
+  xlab("settlement date")+
   ggtitle("Mattituck Cohort Assignment")+
   facet_grid(~Year, scales="free")+
   theme(axis.text.x = element_text(angle = 90, hjust = 1),
@@ -36,6 +37,11 @@ mtage %>%
         panel.grid.major = element_line(colour = "white"))
 #ggsave("Mtcohortassign.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
 #dev.off()
+
+#merge spawn date and fish information. 
+spawndate <-dplyr::rename(spawndate, fishID=Tag.ID)
+mtage2 <-left_join(mtage,spawndate, by="fishID")
+#now we have spawning date and settlement date. 
 
 #histograms where catherine's cohorts are overlaid on the regular cohort data. 
 ## original script is called "field graphs 9_10_19.R"
