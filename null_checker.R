@@ -15,7 +15,7 @@ setwd("/Users//tdolan/Documents//R-Github//WFmicrosats")
 
 ##### Formating the dataset #####
 # We are going to use the doubl0 version. 
-wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_20_sept20204genalex_doubl0.csv")
+wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept20204genalex_doubl0.csv")
 wfpop4df <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_20_sept2020_doubl0.csv", header = TRUE) #csv version 
 
 splitStrata(wfpop) <-~Ocean/Bay/Con/Year
@@ -28,6 +28,8 @@ setPop(wfpop) <-~Bay
 setPop(wfpop) <-~Bay
 wf.gen <-genclone2genind(wfpop) 
 popgenreport(wf.gen,mk.counts=TRUE,mk.locihz = TRUE, mk.fst=TRUE, mk.allele.dist=TRUE, mk.null.all=TRUE,mk.allel.rich = TRUE,mk.differ.stats = TRUE,path.pgr=getwd(),mk.Rcode=TRUE,mk.pdf=TRUE )
+
+
 
 #can also just check for nulls
 wf.nulls <- null.all(wf.gen)

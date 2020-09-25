@@ -31,9 +31,8 @@ setwd("/Users//tdolan/Documents//R-Github//WFmicrosats")
 
 ##### Formating the dataset #####
 # We are going to use the doubl0 version. 
-wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_20_sept20204genalex_doubl0.csv")
-wfpop4df <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_20_sept2020_doubl0.csv", header = TRUE) #csv version 
-
+wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept20204genalex_doubl0.csv")
+wfpop4df <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept2020_doubl0.csv", header = TRUE) #csv version 
 
 splitStrata(wfpop) <-~Ocean/Bay/Con/Year
 setPop(wfpop) <-~Bay
@@ -41,8 +40,7 @@ setPop(wfpop) <-~Bay
 #remove the same loci as before. 
 wfpopLD <-genclone2genind(wfpop)
 all_loci <- locNames(wfpopLD)# create vector of all loci
-#removeloc <- c("WF27","WF06","WF32")# create vector containing loci to remove
-removeloc <- c("WF27")# create vector containing loci to remove
+removeloc <- c("WF27", "WF06")# create vector containing loci to remove
 keeploc <- setdiff(all_loci, removeloc)# create list of loci to keep
 wfpopLD <- wfpopLD[loc = keeploc]# filter loci in genind object
 length(locNames(wfpopLD))# check number of loci in genind obj
@@ -65,20 +63,18 @@ wf.mt <-popsub(wf.mt, blacklist=c("Mt_5")) # we don't need the unidentified indi
 
 
 #create a combined dataset -- This die not work come back to this. 
-setPop(wf.mt) <- ~Bay/Con/Year
-wf.mt2 <-genind2df(wf.mt, usepop=TRUE, oneColPerAll = TRUE)
-wf.mt2 <-mutate(wf.mt2, newpop = ifelse(pop %in% c("Mt_3_2015","Mt_3_2016"),"Mt_3_both",ifelse(pop %in% c("Mt_4_2015","Mt_4_2016"),"Mt_4_both",as.character(pop)))) 
-wf.mt2 <-wf.mt2[,c(34,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33)]
-wf.mt2 <-dplyr::select(wf.mt2, -pop) %>% dplyr::rename(pop=newpop) %>%add_rownames(var="notind") ###THE IND NAME IS NOT RETAINED!!!!!
-#couldn't get df2genind to work. let's write it as a csv and reimport it? 
-write.csv(wf.mt2, file="mtnewpop.csv")
+#setPop(wf.mt) <- ~Bay/Con/Year
+#wf.mt2 <-genind2df(wf.mt, usepop=TRUE, oneColPerAll = TRUE)
+#write.csv(wf.mt2, file="mtnewpop.csv")
 wf.mt3 <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/mtnewpop4genalex.csv")
-splitStrata(wf.mt3) <-~Bay/Con/Year
+#splitStrata(wf.mt3) <-~Bay/Con/Year
+
+
 
 ######HWE Heatmap######
 #Shinnecock
 shihwe.pop <- seppop(wf.shin) %>% lapply(hw.test)
-write.csv(shihwe.pop, file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/wfhwepop16shin.csv")
+write.csv(shihwe.pop, file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/wfhwepop17shin.csv")
 (wfhwe.mat <- sapply(shihwe.pop, "[", i = TRUE, j = 3)) # Take the third column with all rows ---> output this for supplementary tables.
 wfhw.mc <-sapply(shihwe.pop, "[", i = TRUE, j = 4) #the PR exact based on the Monte carlo test! ----> p.values on the hw.test
 wfhw.mc  # this is just the p values. 
@@ -87,12 +83,12 @@ newmat <- wfhwe.mat
 newmat[newmat > alpha] <- 1 #where the p value on the chi square is greater than 0.05, give it a 1.
 # so pink means zero, which means p < 0.05, which means out of HWE. 
 levelplot(t(newmat),scales=list(x=list(rot=90)))
-ggsave("HWEtest16Shin.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
-dev.off()
+
 
 #Mattituck
+setPop(wf.mt) <-~Bay/Con
 mthwe.pop <- seppop(wf.mt) %>% lapply(hw.test)
-write.csv(mthwe.pop, file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/wfhwepop16mt.csv")
+write.csv(mthwe.pop, file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/wfhwepop17mt.csv")
 (wfhwe.mat <- sapply(mthwe.pop, "[", i = TRUE, j = 3)) # Take the third column with all rows ---> output this for supplementary tables.
 wfhw.mc <-sapply(mthwe.pop, "[", i = TRUE, j = 4) #the PR exact based on the Monte carlo test! ----> p.values on the hw.test
 wfhw.mc  # this is just the p values. 
@@ -101,8 +97,7 @@ newmat <- wfhwe.mat
 newmat[newmat > alpha] <- 1 #where the p value on the chi square is greater than 0.05, give it a 1.
 # so pink means zero, which means p < 0.05, which means out of HWE. 
 levelplot(t(newmat),scales=list(x=list(rot=90)))
-ggsave("HWEtest16mt.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
-dev.off()
+
 
 
 ##### Shannon's summary stats ########

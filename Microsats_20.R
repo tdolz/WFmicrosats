@@ -31,8 +31,8 @@ setwd("/Users//tdolan/Documents//R-Github//WFmicrosats")
 
 ##### Formating the dataset #####
 # We are going to use the doubl0 version. 
-wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_20_sept20204genalex_doubl0.csv")
-wfpop4df <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_20_sept2020_doubl0.csv", header = TRUE) #csv version 
+wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept20204genalex_doubl0.csv")
+wfpop4df <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept2020_doubl0.csv", header = TRUE) #csv version 
 
 splitStrata(wfpop) <-~Ocean/Bay/Con/Year
 setPop(wfpop) <-~Bay
@@ -57,7 +57,7 @@ wfia.pair <- seppop(wfpop2CLEAN) %>% lapply(pair.ia) #by bay!
 #go back to wfpop for this. 
 wfpopLD <-genclone2genind(wfpop)
 all_loci <- locNames(wfpopLD)# create vector of all loci
-removeloc <- c("WF27","WF06","WF32")# create vector containing loci to remove
+removeloc <- c("WF27","WF06")# create vector containing loci to remove
 keeploc <- setdiff(all_loci, removeloc)# create list of loci to keep
 wfpopLD <- wfpopLD[loc = keeploc]# filter loci in genind object
 length(locNames(wfpopLD))# check number of loci in genind obj
@@ -73,8 +73,7 @@ info_table(wfpopLD, plot = TRUE, scaled =FALSE)
 #dev.off()
 
 #HWE Heatmap#
-setPop(wfpopLD) <- ~Ocean
-setPop(wfpopLD) <-~Bay
+setPop(wfpopLD) <-~Ocean
 hw.test(wfpopLD, B=1000) #permutation based
 hw.test(wfpop2CLEAN, B=1000)
 hw.test(wfpopLD, B=0) #analytical p value
@@ -90,67 +89,6 @@ newmat[newmat > alpha] <- 1 #where the p value on the chi square is greater than
 levelplot(t(newmat),scales=list(x=list(rot=90)))
 #ggsave("HWEtest16.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
 #dev.off()
-
-##### Compare to using 18  microsats ####
-wfpop18 <-genclone2genind(wfpop)
-all_loci <- locNames(wfpop18)# create vector of all loci
-removeloc <- c("WF27")# create vector containing loci to remove
-keeploc <- setdiff(all_loci, removeloc)# create list of loci to keep
-wfpop18 <- wfpop18[loc = keeploc]# filter loci in genind object
-length(locNames(wfpop18))# check number of loci in genind obj
-
-#now re-remove the missing data. 
-setPop(wfpop18) <-~Bay
-wfpop18 <-wfpop18 %>% missingno("loci", cutoff=0.30) # removes loci where overall missingness > 30%, so WF01
-wfpop18 <- wfpop18 %>% missingno("geno", cutoff=0.25) # remove samples that are > 25% missing
-
-#now re-do HW test
-setPop(wfpop18) <-~Bay
-hw.test(wfpop18, B=1000) #permutation based
-hw.test(wfpop18, B=0) #analytical p value
-wfhwe.pop18 <- seppop(wfpop18) %>% lapply(hw.test)
-#write.csv(wfhwe.pop, file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/wfhwepop18.csv")
-(wfhwe.mat <- sapply(wfhwe.pop18, "[", i = TRUE, j = 3)) # Take the third column with all rows ---> output this for supplementary tables.
-wfhw.mc <-sapply(wfhwe.pop18, "[", i = TRUE, j = 4) #the PR exact based on the Monte carlo test! ----> p.values on the hw.test
-wfhw.mc  # this is just the p values. 
-alpha  <- 0.05
-newmat <- wfhwe.mat
-newmat[newmat > alpha] <- 1 #where the p value on the chi square is greater than 0.05, give it a 1.
-# so pink means zero, which means p < 0.05, which means out of HWE. 
-levelplot(t(newmat),scales=list(x=list(rot=90)))
-
-##### Compare to using 17  microsats ####
-wfpop17 <-genclone2genind(wfpop)
-all_loci <- locNames(wfpop17)# create vector of all loci
-removeloc <- c("WF27", "WF06")# create vector containing loci to remove
-keeploc <- setdiff(all_loci, removeloc)# create list of loci to keep
-wfpop17 <- wfpop17[loc = keeploc]# filter loci in genind object
-length(locNames(wfpop17))# check number of loci in genind obj. 
-setPop(wfpop17) <-~Bay
-wfpop17 <-wfpop17 %>% missingno("loci", cutoff=0.30) # removes loci where overall missingness > 30%, so WF01
-wfpop17 <- wfpop17 %>% missingno("geno", cutoff=0.25) # remove samples that are > 25% missing
-setPop(wfpop17) <-~Bay
-hw.test(wfpop17, B=1000) #permutation based
-hw.test(wfpop17, B=0) #analytical p value
-wfhwe.pop17 <- seppop(wfpop17) %>% lapply(hw.test)
-#write.csv(wfhwe.pop, file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/wfhwepop17.csv")
-(wfhwe.mat <- sapply(wfhwe.pop17, "[", i = TRUE, j = 3)) # Take the third column with all rows ---> output this for supplementary tables.
-wfhw.mc <-sapply(wfhwe.pop17, "[", i = TRUE, j = 4) #the PR exact based on the Monte carlo test! ----> p.values on the hw.test
-wfhw.mc  # this is just the p values. 
-alpha  <- 0.05
-newmat <- wfhwe.mat
-newmat[newmat > alpha] <- 1 #where the p value on the chi square is greater than 0.05, give it a 1.
-levelplot(t(newmat),scales=list(x=list(rot=90)))
-
-#make a graph comparing. 16, 17, 18, microsatellites
-hw16 <-as.data.frame(wfhwe.pop) %>% mutate(numloci="16")
-hw17 <-as.data.frame(wfhwe.pop17) %>% mutate(numloci="17")
-hw18 <-as.data.frame(wfhwe.pop18) %>% mutate(numloci="18")
-hwpops <-bind_rows(hw16,hw17,hw18)
-
-
-############ CHANGE THIS HERE ################
-wfpopLD <- wfpop17
 
 
 ### Summary Data ####
@@ -190,7 +128,10 @@ ggplot(h4, aes(x = locus, y = Bay, fill=hexhobs)) +
   ylab("")+
   #theme_standard() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
-ggsave('hexhobsheat.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
+ggsave('hexhobsheat17.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
+
+
+###Summary stats from popgenreport. 
 
 
 ##### Shannon's summary stats ########
@@ -208,8 +149,6 @@ wfpopLD
 setPop(wfpopLD) <- ~Bay/Con/Year
 df <-genind2df(wfpopLD, usepop = TRUE, oneColPerAll = TRUE) 
 df$Ind <- rownames(df)
- #reorder so that the first column has to be the sample name. 
-#df <-df[,c(34,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33)] #16 loci
 df <-df[,c(36,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35)] #17 loci
 df[df=="NA"] <- 0 # missing data must be 0
 SampleInfo <- dplyr::select(df, Ind, pop)
@@ -257,7 +196,7 @@ for (p in names(gen_grp)) {
 
 #here it is in one dataframe
 loc_stats <- plyr::ldply(loc_stats, data.frame) %>%
-  select(-Hexp) %>%
+  dplyr::select(-Hexp) %>%
   dplyr::rename(GRP = `.id`,
                 SIMPSON_IDX = `X1.D`,
                 N_ALLELES = allele,
@@ -286,11 +225,7 @@ loc_stats <- left_join(loc_stats, loc_stats_2) %>%
   filter(LOCUS != "mean")
 
 loc_stats[is.na(loc_stats)] <- NA
-#write.csv(loc_stats,file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/loc_stats16.csv")
-
-# write file with genetic diversity stats by locus to file
-#write_delim(loc_stats, "results/gendiv.locstats", delim = "\t")
-
+#write.csv(loc_stats,file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/loc_stats17.csv")
 
 #create different loc stats groups for testing. 
 loc_stats_bay <-filter(loc_stats, GRP %in% c("Nap","Mor","Jam","Shin","Mt"))
@@ -309,9 +244,9 @@ meltlocstats2 <-filter(meltlocstats, GRP %in% c("Nap","Mor","Jam","Shin","Mt","A
 g2h_all <-genind2hierfstat(wfpopLD)
 g2hall <-basic.stats(g2h_all)
 global <-as.data.frame(g2hall$perloc) %>% tibble::rownames_to_column("locus") %>% mutate(Bay="ALL")
-#write.csv(global,file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/basic_stats16.csv" )
+#write.csv(global,file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/basic_stats17.csv" )
 
-
+setPop(wfpopLD) <-~Bay
 g2h_bay <-genind2hierfstat(wfpopLD, pop=wfpopLD@pop)
 
 wfshin <- popsub(wfpopLD, sublist=c("Shin"))  #%>% missingno("geno", cutoff=0.10)
@@ -335,7 +270,7 @@ meltlocstats_bay %>%
   xlab(' ')+ylab("Nei's Gene Diversity")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-#ggsave('nei_bay.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
+#ggsave('nei_bay17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
 
 #Inbreeding coefficient
 meltlocstats_bay %>%
@@ -361,7 +296,7 @@ meltlocstats_bay %>%
   xlab(' ')+ylab("Evenness")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('Evenness_bay.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
+ggsave('Evenness_bay17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
 
 #Shannon index
 meltlocstats_bay %>%
@@ -374,7 +309,7 @@ meltlocstats_bay %>%
   xlab(' ')+ylab("Shannon Index")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('Shannon_idxbay.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
+ggsave('Shannon_idxbay17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
 
 #Expected heterozygosity
 meltlocstats_bay %>%
@@ -387,7 +322,7 @@ meltlocstats_bay %>%
   xlab(' ')+ylab("Expected Heterozygosity")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('Hsbay.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
+ggsave('Hsbay17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
 
 #Observed heterozygosity
 meltlocstats_bay %>%
@@ -400,7 +335,7 @@ meltlocstats_bay %>%
   xlab(' ')+ylab("Observed Heterozygosity")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('Hobay.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
+ggsave('Hobay17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
 
 
 ######## CALCULATE RAREFIED ALLELIC RICHNESS ----
@@ -455,12 +390,12 @@ meltar3 %>%
   xlab(' ')+ylab("Rareified allele count")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-#ggsave('rareifiedallelesLD_bay.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
+ggsave('rareifiedallelesLD_bay17.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
 
 ##Private alleles
 df <-genind2df(wfpopLD, usepop = TRUE, oneColPerAll = TRUE) 
 df$Ind <- rownames(df)
-df <-df[,c(34,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33)]
+df <-df[,c(36,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35)]
 df[df=="NA"] <- 0 # missing data must be 0
 wf.g <-df2gtypes(df,ploidy=2)
 
@@ -481,33 +416,9 @@ meltpA %>%
   xlab(' ')+ylab("Private alleles")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-#ggsave('privateallelesLD_bay.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
+ggsave('privateallelesLD_bay17.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
 
 
-##### Heatmaps #####
-#heatmap
-ggplot(meltpA, aes(x = LOCUS, y = variable, fill=value)) +
-  geom_tile(color = "black") +
-  geom_text(aes(label = round(value, 2))) +
-  scale_fill_viridis() +
-  coord_fixed(ratio = 1) +
-  ylab("")+
-  #theme_standard() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
-#ggsave('privateallelesLDheat.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
-
-#heatmap of FIS
-meltlocstats %>%
-  filter(variable == "Fis") %>%
-  ggplot(aes(x = LOCUS, y = GRP, fill=value)) +
-  geom_tile(color = "black") +
-  geom_text(aes(label = round(value, 2)),colour="lightblue") +
-  scale_fill_viridis(option="A") +
-  coord_fixed(ratio = 1) +
-  ylab("")+
-  #theme_standard() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))  
-ggsave('Fis.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
 
 # TEST FOR SIGNIFICANT DIFFERENCES
 # need to use Friedman's test for global test and Wilcoxon signed rank for pairwise tests 
@@ -624,7 +535,7 @@ results_nei %>%
   scale_color_manual(values=c("white","red"), guide=FALSE)+
   xlab("")+ylab("")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-ggsave('neiBaytile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
+#ggsave('neiBaytile17.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
 
 #FIS heatmap
 #delete duplicate pairs to form the half grid of the heatmap. 
@@ -643,11 +554,11 @@ results_Fis %>%
   scale_color_manual(values=c("white","red"), guide=FALSE)+
   xlab("")+ylab("")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-ggsave('FisBaytile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
+#ggsave('FisBaytile17.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
 
 #EVENNESS heatmap
 #delete duplicate pairs to form the half grid of the heatmap. 
-results_even <-filter(results, test=="EVENNESS") %>%
+results_even <-filter(results, test=="Evenness") %>%
   arrange(test.statistic) %>% unique() %>% 
   mutate(pair1 = pmin(pop1,pop2), pair2 =pmax(pop1,pop2)) %>% arrange(pair1)
 toDelete <- seq(1, nrow(results_even), 2)
@@ -662,7 +573,7 @@ results_even %>%
   scale_color_manual(values=c("white","red"), guide=FALSE)+
   xlab("")+ylab("")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-ggsave('evennessBaytile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
+#ggsave('evennessBaytile17.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
 
 #shannons heatmap
 #delete duplicate pairs to form the half grid of the heatmap. 
@@ -681,7 +592,7 @@ results_shannon %>%
   scale_color_manual(values=c("white","red"), guide=FALSE)+
   xlab("")+ylab("")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-ggsave('shannonBaytile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
+#ggsave('shannonBaytile17.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
 
 
 ##Wilcoxon test for rarified alleles##
@@ -727,9 +638,9 @@ results_ar<-mutate(results_ar, p_value = cut(p.value, breaks=c(0,0.005, 0.01,0.0
 cols <- c("(0,0.005]"="#034e7b", "(0.005,0.01]" = "#045a8d", "(0.01,0.05]" = "#2b8cbe", "(0.05,0.1]" = "#74a9cf", "(0.1,0.5]"  = "#a6bddb", "(0.5,1]"="#d0d1e6")
 
 results_ar <-arrange(results_ar, test.statistic) %>% unique() %>% 
-  mutate(pair1 = pmin(pop1,pop2), pair2 =pmax(pop1,pop2)) %>% arrange(pair1)
-toDelete <- seq(1, nrow(results_ar), 2)
-results_ar <- results_ar[ toDelete ,]
+  mutate(pair1 = pmin(pop1,pop2), pair2 =pmax(pop1,pop2)) %>% arrange(pair1, pair2)
+#toDelete <- seq(1, nrow(results_ar), 2)
+#results_ar <- results_ar[ toDelete ,]
 
 # plot heatmap of results ====
 results_ar %>%
@@ -740,9 +651,7 @@ results_ar %>%
   scale_color_manual(values=c("white","red"), guide=FALSE)+
   xlab("")+ylab("")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-ggsave('rariefied_allelesBaytile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
-
-
+#ggsave('rariefied_allelesBaytile17.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
 
 
 
@@ -775,7 +684,7 @@ bayFST %>%
   #scale_color_manual(values=c("white","red"), guide=FALSE)+
   xlab("")+ylab("")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-ggsave('FSTBaytile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
+ggsave('FSTBaytile17.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
 
 #see previous scripts for other kinds of FST you can calculate
 
@@ -821,7 +730,7 @@ rel2 %>%
   xlab(' ')+ylab("Internal Relatedness")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('rel_bay.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
+#ggsave('rel_bay17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
 
 # lets try testing for significant differences in mean IR for each bay pair with a wilcox sign test, idk why that's not ok... 
 comp <- as.character(unique(rel2$name))  
@@ -942,7 +851,7 @@ t %>%
   scale_color_manual(values=c("white","red"), guide=FALSE)+
   xlab("")+ylab("")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-ggsave('IRBaytile.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
+#ggsave('IRBaytile17.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
 
 #### Genetic Distance ####
 
@@ -973,11 +882,10 @@ colnames(coord.dist)<-c("x","y")
 #Dgeo <-dist(coord.dist)  # this is a euclidean distance matrix for geographic coordinates but not a shortest distnce by sea measure. 
 
 #Experimental - manually inputting the shortest distance by sea. 
-short.dist <-data.frame(site.x=c("Mor","Mor","Mor","Mor","Jam","Jam","Jam","Shin","Shin","Mt"), 
-                        site.y=c("Jam","Shin","Mt","Nap","Shin","Mt","Nap","Mt","Nap","Nap"),
-                        #Distance=c(1,2,3,4,5,6,7,8,9,10))
-                        Distance=c(109.04,13.28,144.21,74.01,132.07,161.5,195.2,81.06,58.16,56.82))
-#short.dist <-arrange(short.dist, site.x, site.y) #it's sorted... 
+short.dist <-data.frame(site.x=c("Nap","Nap","Nap","Nap","Mor","Mor","Mor","Jam","Jam","Shin"), 
+                        site.y=c("Mor","Jam","Shin","Mt","Jam","Shin","Mt","Shin","Mt","Mt"),
+                        Distance=c(74.09,195.2,58.16,56.82,109.04,13.28,144.21,132.07,161.5,81.06))
+
 
 Dgeo2 <- with(short.dist, Distance)
 nams <- with(short.dist, unique(c(as.character(site.x), as.character(site.y))))
@@ -997,7 +905,7 @@ plot(ibd2)
 library("MASS")
 dens <- kde2d(Dgeo2,Dgen, n=300)
 myPal <- colorRampPalette(c("white","blue","gold", "orange", "red"))
-plot(Dgeo2, Dgen, xlab="distance (KM)", ylim= c(0.12, 0.30),ylab="genetic distance (euclidean)")
+plot(Dgeo2, Dgen, xlab="distance (KM)", ylim= c(0.12, 0.35),ylab="genetic distance (euclidean)")
 image(dens, col=transp(myPal(500),0.4), add=TRUE)
 abline(lm(Dgen~Dgeo2))
 #strong looking pattern of IBD. 
