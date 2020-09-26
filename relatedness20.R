@@ -29,7 +29,7 @@ library('forcats')
 setwd("/Users//tdolan/Documents//R-Github//WFmicrosats")
 
 ##### Formating the dataset #####
-wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_20_sept20204genalex_doubl0.csv")
+wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept20204genalex_doubl0.csv")
 
 splitStrata(wfpop) <-~Ocean/Bay/Con/Year
 setPop(wfpop) <-~Bay
@@ -37,7 +37,7 @@ setPop(wfpop) <-~Bay
 ### Format Data as in Microsats_20.R
 wfpopLD <-genclone2genind(wfpop)
 all_loci <- locNames(wfpopLD)# create vector of all loci
-removeloc <- c("WF27","WF06","WF32")# create vector containing loci to remove
+removeloc <- c("WF27","WF06")# create vector containing loci to remove
 keeploc <- setdiff(all_loci, removeloc)# create list of loci to keep
 wfpopLD <- wfpopLD[loc = keeploc]# filter loci in genind object
 #now re-remove the missing data. 

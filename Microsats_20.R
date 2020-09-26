@@ -57,7 +57,7 @@ wfia.pair <- seppop(wfpop2CLEAN) %>% lapply(pair.ia) #by bay!
 #go back to wfpop for this. 
 wfpopLD <-genclone2genind(wfpop)
 all_loci <- locNames(wfpopLD)# create vector of all loci
-removeloc <- c("WF27","WF06")# create vector containing loci to remove
+removeloc <- c("WF06")# create vector containing loci to remove
 keeploc <- setdiff(all_loci, removeloc)# create list of loci to keep
 wfpopLD <- wfpopLD[loc = keeploc]# filter loci in genind object
 length(locNames(wfpopLD))# check number of loci in genind obj
@@ -89,6 +89,12 @@ newmat[newmat > alpha] <- 1 #where the p value on the chi square is greater than
 levelplot(t(newmat),scales=list(x=list(rot=90)))
 #ggsave("HWEtest16.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
 #dev.off()
+
+#PopGenReport - Remember to turn this off. 
+#setPop(wfpopLD) <-~Bay
+#wf.gen <-genclone2genind(wfpopLD) 
+#popgenreport(wf.gen,mk.counts=TRUE,mk.locihz = TRUE, mk.fst=TRUE, mk.allele.dist=TRUE, mk.null.all=TRUE,mk.allel.rich = TRUE,mk.differ.stats = TRUE,path.pgr=getwd(),mk.Rcode=TRUE,mk.pdf=TRUE )
+
 
 
 ### Summary Data ####

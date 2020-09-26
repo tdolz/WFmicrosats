@@ -22,8 +22,8 @@ setwd("/Users//tdolan/Documents//R-Github//WFmicrosats")
 
 ##### Formating the dataset #####
 # We are going to use the doubl0 version. 
-wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_20_sept20204genalex_doubl0ABC.csv")
-wfpop4df <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_20_sept20204DF_doubl0ABC.csv", header = TRUE) #csv version 
+wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept20204genalex_doubl0ABC.csv")
+wfpop4df <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept2020_doubl0ABC.csv", header = TRUE) #csv version 
 
 splitStrata(wfpop) <-~Ocean/Bay/Con/Year
 setPop(wfpop) <-~Bay
@@ -31,7 +31,7 @@ setPop(wfpop) <-~Bay
 #clean the dataset
 wfpopLD <-genclone2genind(wfpop)
 all_loci <- locNames(wfpopLD)# create vector of all loci
-removeloc <- c("WF27","WF06","WF32")# create vector containing loci to remove
+removeloc <- c("WF06")# create vector containing loci to remove
 keeploc <- setdiff(all_loci, removeloc)# create list of loci to keep
 wfpopLD <- wfpopLD[loc = keeploc]# filter loci in genind object
 wfpopLD <-wfpopLD %>% missingno("loci", cutoff=0.30) # removes loci where overall missingness > 30%, so WF01
@@ -40,7 +40,7 @@ length(locNames(wfpopLD))# check number of loci in genind obj
 
 #create a dataset that is just 2016 YOY only. 
 setPop(wfpopLD) <-~Ocean/Bay/Con/Year
-wfyoy16 <-popsub(wfpopLD, blacklist=c("Atl_Mt_3_both","Atl_Mt_4_both","Atl_Mt_5_2015","Atl_Mt_5_2016","Atl_Shin_1_2017","Atl_Shin_2_2017","Atl_Mt_1_2015","Atl_Mt_2_2015"))
+wfyoy16 <-popsub(wfpopLD, blacklist=c("Atl_Mt_3_adults","Atl_Mt_4_adults","Atl_Mt_5_2015","Atl_Mt_5_2016","Atl_Shin_1_2017","Atl_Shin_2_2017","Atl_Mt_1_2015","Atl_Mt_2_2015"))
 
 #shinnecock only database
 setPop(wfpopLD) <-~Bay
@@ -58,7 +58,12 @@ shincolors <-c("#143601","#68b0ab","#538d22","#aad576")
 Mtcolors <-c("#f4d35e","#ee964b","#f95738","#ee4266","#15616d","#0d3b66")
 lindsaycolors <-c("#ff5d8f","#ff90b3","#ce4257","#8a2846","#84bcda","#ffd166")
 admixcols <-c("#8ecae6","#219ebc","#023047","#ffb703","#fb8500")
+sunnycolors <-c("#ec4847","#e6df44","#6600ff", "#061283", "#5bd0c8")
+boldcols <-c("firebrick","orange","black","blue","#016450")
 
+library("wesanderson")
+royal <-wes_palette(5,name="Darjeeling1",type="continuous")
+fox <-wes_palette(5,name="FantasticFox1",type="continuous")
 #### Clustering ####
 ####DAPC USE THIS ONE####
   #http://adegenet.r-forge.r-project.org/files/tutorial-dapc.pdf
@@ -79,10 +84,10 @@ admixcols <-c("#8ecae6","#219ebc","#023047","#ffb703","#fb8500")
 setPop(wfpopLD) <-~Bay
 bay_dapc <- dapc(wfpopLD, n.pca = 150, n.da = 2) 
 as <- optim.a.score(bay_dapc)#how many clusters
-#ggsave("bayclust_optim.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs"); dev.off()
+#ggsave("bayclust_optim17.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs"); dev.off()
 #PC plots
-scatter(bay_dapc, posi.da="topleft",scree.pca=TRUE,posi.pca="topright",col=drabcolors,legend=FALSE,solid=1.0) #adjust the solidity value for better plots. 
-#ggsave("bayclust_150pC_2.png", path="/Users//tdolan//Documents//WIP research//microsats//microsat_figs"); dev.off()
+scatter(bay_dapc, posi.da="topleft",scree.pca=TRUE,posi.pca="topright",col=boldcols,legend=FALSE,solid=1.0) #adjust the solidity value for better plots. 
+#ggsave("bayclust17_150pC_2.png", path="/Users//tdolan//Documents//WIP research//microsats//microsat_figs"); dev.off()
 scatter(bay_dapc,1,1, bg="white", scree.da=FALSE, legend=TRUE, solid=.4,col=drabcolors,)
 #ggsave("/Users/tdolan/Documents/WIP research/microsats/microsat_figs/bayclust_150pC_1.png");dev.off()
 assignplot(bay_dapc)#check assignments
@@ -156,12 +161,12 @@ compoplot(mt_dapc, subset=temp, show.lab=TRUE, posi="bottomright", txt.leg=paste
 
 
 #need to K fold cross-validate the DAPC. but having a really hard time with this one.... 
-wfclust <-find.clusters(wfpopLD, choose.n.clust=FALSE) #kmeans clustering
+wfclust <-find.clusters(wfpopLD, choose.n.clust=TRUE) #kmeans clustering
 
 # You need to edit the original df so that it's identical to wfpopLD, which means manually removing specific individuals and loci. 
-wfpop4df <-dplyr::select(wfpop4df,-"WF01.1",-"WF01.2",-"WF27.1",-"WF27.2",-"WF06.1",-"WF06.2",-"WF32.1",-"WF32.2")
-wfpop4df <-filter(wfpop4df, !Ind %in% c(83, 41, 189, 190, 191, 197, 209, 238, 173, 174, 175, 179, 185, 186, 216, 8, 24, 123, 126, 128, 133, 158, 159,
-                                        160, 161, 122, 138, 141, 142, 150, "S34", "S39", "S74", "S87", "S94"))
+wfpop4df <-dplyr::select(wfpop4df,-"WF01.1",-"WF01.2",-"WF06.1",-"WF06.2")
+wfpop4df <-filter(wfpop4df, !Ind %in% c(83, 41, 50, 66, 189, 190, 191, 197, 209, 238, 173, 174, 175, 179, 185, 186, 216, 8, 19, 24, 30, 32, 123, 126, 128, 133,
+                                        158, 159, 160, 161, 165, 122, 138, 141, 142, 150, "S34", "S39","S74", "S87", "S94"))
 
 #try with the original df? 
 #doing this works
