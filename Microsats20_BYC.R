@@ -368,6 +368,15 @@ friedman.test(Fis~GRP | LOCUS, data= fdata) #Fis
 friedman.test(SHANNON_IDX~GRP | LOCUS, data= fdata) 
 friedman.test(value~variable | LOCUS, data= meltar3) #rareified alleles #come back to this one.... 
 
+#We have to re-do friedmans for Hs because it's wrong. (either that or Nei's is wrong which would be worse.)
+sumpop <- seppop(wfpopLD) %>% lapply(summary)
+locs <-c("J42",	"WF22",	"PAM27",	"PAM79",	"WF27",	"WF16",	"WF33",	"WF3",	"WF517",	"WF196",	"WF223",	"WF421",	"A441",	"PAM21",	"PSY087",	"PSY022",	"WF06", "WF12",	"WF01",	"WF32")
+
+Hexppop <- bind_cols(locs, as.vector(sumpop$Nap$Hexp),
+                 as.vector(sumpop$Mor$Hexp),
+                 as.vector(sumpop$Jam$Hexp),sumpop$Shin$Hexp,sumpop$Mt$Hexp)
+
+
 #You could automate the test result extraction similar to how you did with the lm summary,,, but not right now. 
 
 #######Wilcoxon tests #####
