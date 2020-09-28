@@ -1,7 +1,7 @@
 ### Relatedness #####
 
 ## NOTES ##
-## includes 16 loci
+## includes 17 loci
 ## for no half 0 genotypes, use the double0 version of the files 
 ## population corrected for new cohort assignment
 ## based on the script "skreportdnaJAN_28_2020MATTITUCK.R"
@@ -54,7 +54,7 @@ length(locNames(wfpopLD))# check number of loci in genind obj
 setPop(wfpopLD) <-~Bay
 df <-genind2df(wfpopLD, usepop = FALSE, oneColPerAll = TRUE) 
 df$Ind <- rownames(df)
-df <-df[,c(33,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32)]
+df <-df[,c(35,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34)]
 df[df=="NA"] <- 0 # missing data must be 0
 write.table(df, "scratch",row.names = FALSE, col.names = FALSE, sep = "\t", quote = FALSE) #write it.
 genotypedata <- readgenotypedata("scratch")# import input file as list (gdata, nloci, nalleles, ninds, freqs)
@@ -63,9 +63,9 @@ genotypedata <- readgenotypedata("scratch")# import input file as list (gdata, n
 relatedness_lynchrd <- coancestry(genotypedata$gdata,lynchrd = 1)
 
 #trioml estimate (Wang) - Can't do this because it crashes R studio. 
-#relatedness_triad <- coancestry(genotypedata$gdata,trioml = 1)
-#relatedT <- relatedness_triad$relatedness %>%
-  #dplyr::select(pair.no, ind1.id, ind2.id, trioml)
+relatedness_triad <- coancestry(genotypedata$gdata,trioml = 1)
+relatedT <- relatedness_triad$relatedness %>%
+  dplyr::select(pair.no, ind1.id, ind2.id, trioml)
 
 # write relatedness to file
 relatedn <- relatedness_lynchrd$relatedness %>%
@@ -74,16 +74,21 @@ relatedn <- relatedness_lynchrd$relatedness %>%
 #not sure what's going on here. 
 library("readr")
 write_delim(relatedn, "pairwise_relatedness")
+write_delim(relatedT, "pairwise_relatedness_trioml")
+
+
+### From now on in this version we're using Trioml, no lyncrd. 
+
 
 # write inbreeding to file
-inbreed <- relatedness_lynchrd$inbreeding %>%
+inbreed <- relatedness_triad$inbreeding %>%
   dplyr::select(ind.id, L3, LH) %>%
   dplyr::rename(INDV = ind.id)
 write_delim(inbreed, "inbreeding")
 
 #the simulation --REMEMBER TO TURN OFF AND ON
 #change bootstrap back to 100 because 1000 just takes too long. 
-cosim <-compareestimators(relatedness_lynchrd, ninds=100)
+cosim <-compareestimators(relatedness_triad, ninds=100)
 cosim
 #ggsave("relatendess_simulation.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
 #dev.off()
@@ -94,7 +99,7 @@ relply
 
 #make your own boxplot of just lynch and ritland or whatever. 
 relsim %>%
-  filter(Estimator == "L & R") %>%
+  filter(Estimator == "W") %>%
   ggplot(aes(x=fct_rev(relationship),y=Relatedness_Value))+ 
   geom_boxplot()+ 
   xlab('relationship ')+ylab("Pairwise Relatedness")+
