@@ -446,13 +446,15 @@ fdata <- loc_stats_bay
 
 
 ###Friedman's test for Global heterogeneity
-friedman.test(Hs~GRP | LOCUS, data= fdata) #Hs
+friedman.test(Hs~GRP | LOCUS, data= fdata) #Hs - fixing this. 
 friedman.test(EVENNESS~GRP | LOCUS, data= fdata) #evenness
 friedman.test(Ht~GRP | LOCUS, data= fdata) #Ht
 friedman.test(Fis~GRP | LOCUS, data= fdata) #Fis
 friedman.test(SHANNON_IDX~GRP | LOCUS, data= fdata) 
 friedman.test(value~variable | LOCUS, data= meltar3) #rareified alleles #come back to this one.... 
 
+#h4 from before. 
+friedman.test(hobs~Bay | locus, data=h4)
 
 
 #You could automate the test result extraction similar to how you did with the lm summary,,, but not right now. 
