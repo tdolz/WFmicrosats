@@ -59,8 +59,77 @@ df[df=="NA"] <- 0 # missing data must be 0
 write.table(df, "scratch",row.names = FALSE, col.names = FALSE, sep = "\t", quote = FALSE) #write it.
 genotypedata <- readgenotypedata("scratch")# import input file as list (gdata, nloci, nalleles, ninds, freqs)
 
-# pairwise relatedness (Lynch & Ritland 1999)
-relatedness_lynchrd <- coancestry(genotypedata$gdata,lynchrd = 1)
+#custom comparisons
+output <- coancestry(genotypedata$gdata, lynchrd=1, trioml=1, quellergt=1, wang=1)
+simrel <- cleanuprvals(output$relatedness , 100)
+riomlpo <- simrel[1:100,5]
+triomlfs <-simrel[(100+1):(2*100),5]
+triomlhs <-simrel[((2*100) + 1): (3*100),5]
+triomlur <-simrel[((3*100)+1):(4*100),5]
+wangpo <- simrel[1:100,6]
+wangfs <-simrel[(100+1):(2*100),6]
+wanghs <-simrel[((2*100) + 1): (3*100),6]
+wangur <-simrel[((3*100)+1):(4*100),6]
+quellerpo <- simrel[1:100,10]
+quellerfs <-simrel[(100+1):(2*100),10]
+quellerhs <-simrel[((2*100) + 1): (3*100),10]
+quellerur <-simrel[((3*100)+1):(4*100),10]
+lynchrdpo <- simrel[1:100,7]
+lynchrdfs <-simrel[(100+1):(2*100),7]
+lynchrdhs <-simrel[((2*100) + 1): (3*100),7]
+lynchrdur <-simrel[((3*100)+1):(4*100),7]
+
+trioml <-rep("tri",100)
+wang <-rep("wang",100)
+lynchrd <-rep("lynchrd",100)
+quellergt <-rep("queller",100)
+estimator2 <- c(trioml, wang, quellergt, lynchrd) 
+Estimator <- rep(estimator2 , 4)
+
+po <- rep("Parent-Offspring", (4 * 100)) 
+fs <- rep("Full-Sibs", (4 * 100))
+hs <- rep("Half-Sibs", (4 * 100)) 
+ur <- rep("Unrelated", (4 * 100))
+relationship <- c(po, fs, hs, ur)
+
+relatednesspo <- c(triomlpo , wangpo , quellergtpo , lynchrdpo)
+relatednessfs <- c(triomlfs , wangfs , quellergtfs , lynchrdfs)
+relatednesshs <- c(triomlhs , wanghs , quellergths , lynchrdhs)
+relatednessur <- c(triomlur , wangur , quellergtur , lynchrdur)
+Relatedness_Value <- c(relatednesspo , relatednessfs , relatednesshs , relatednessur)
+
+combineddata <- as.data.frame(cbind(Estimator , relationship , Relatedness_Value))
+combineddata$Relatedness_Value <- as.numeric(as.character( combineddata$Relatedness_Value))
+
+ggplot(combineddata , aes(x = Estimator , y = Relatedness_Value), ylim = c(-0.5, 1.0)) +
+  geom_boxplot() +
+  facet_wrap(~ relationship)
+
+#calculate correlation coefficient between observed values for each estimator and the expected values. 
+urval <- rep(0, 100) 
+hsval <- rep (0.25 , 100)
+fsval <- rep (0.5 , 100)
+poval <- rep (0.5 , 100)
+relvals <- c(poval , fsval , hsval , urval)
+
+cor(relvals , simrel[, 5])
+cor(relvals , simrel[, 6])
+cor(relvals , simrel[, 10])
+cor(relvals , simrel[, 11])
+
+#the simulation --REMEMBER TO TURN OFF AND ON
+#change bootstrap back to 100 because 1000 just takes too long. 
+cosim <-compareestimators(relatedness_triad, ninds=100)
+cosim
+#ggsave("relatendess_simulation.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+#dev.off()
+#extract mean, median & CI values for relatedness from the simulation. 
+relsim <- as.data.frame(cosim$data)
+relply<- ddply(relsim, Estimator~relationship,summarize, mean.rel = mean(Relatedness_Value), LIrel = quantile(Relatedness_Value,0.05), HIrel = quantile(Relatedness_Value, 0.95), medianrel= quantile(Relatedness_Value, 0.5))
+relply
+
+
+
 
 #trioml estimate (Wang) - Can't do this because it crashes R studio. 
 relatedness_triad <- coancestry(genotypedata$gdata,trioml = 1)
@@ -76,26 +145,13 @@ library("readr")
 write_delim(relatedn, "pairwise_relatedness")
 write_delim(relatedT, "pairwise_relatedness_trioml")
 
-
-### From now on in this version we're using Trioml, no lyncrd. 
-
-
 # write inbreeding to file
 inbreed <- relatedness_triad$inbreeding %>%
   dplyr::select(ind.id, L3, LH) %>%
   dplyr::rename(INDV = ind.id)
 write_delim(inbreed, "inbreeding")
 
-#the simulation --REMEMBER TO TURN OFF AND ON
-#change bootstrap back to 100 because 1000 just takes too long. 
-cosim <-compareestimators(relatedness_triad, ninds=100)
-cosim
-#ggsave("relatendess_simulation.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
-#dev.off()
-#extract mean, median & CI values for relatedness from the simulation. 
-relsim <- as.data.frame(cosim$data)
-relply<- ddply(relsim, Estimator~relationship,summarize, mean.rel = mean(Relatedness_Value), LIrel = quantile(Relatedness_Value,0.05), HIrel = quantile(Relatedness_Value, 0.95), medianrel= quantile(Relatedness_Value, 0.5))
-relply
+
 
 #make your own boxplot of just lynch and ritland or whatever. 
 relsim %>%
