@@ -59,8 +59,9 @@ df[df=="NA"] <- 0 # missing data must be 0
 write.table(df, "scratch",row.names = FALSE, col.names = FALSE, sep = "\t", quote = FALSE) #write it.
 genotypedata <- readgenotypedata("scratch")# import input file as list (gdata, nloci, nalleles, ninds, freqs)
 
-#custom comparisons
-output <- coancestry(genotypedata$gdata, lynchrd=1, trioml=1, quellergt=1, wang=1)
+#custom comparisons;
+simdata <-familysim(genotypedata$freqs,100)
+output <- coancestry(simdata, lynchrd=1, trioml=1, quellergt=1, wang=1)
 simrel <- cleanuprvals(output$relatedness , 100)
 riomlpo <- simrel[1:100,5]
 triomlfs <-simrel[(100+1):(2*100),5]
@@ -74,10 +75,10 @@ quellerpo <- simrel[1:100,10]
 quellerfs <-simrel[(100+1):(2*100),10]
 quellerhs <-simrel[((2*100) + 1): (3*100),10]
 quellerur <-simrel[((3*100)+1):(4*100),10]
-lynchrdpo <- simrel[1:100,7]
-lynchrdfs <-simrel[(100+1):(2*100),7]
-lynchrdhs <-simrel[((2*100) + 1): (3*100),7]
-lynchrdur <-simrel[((3*100)+1):(4*100),7]
+lynchrdpo <- simrel[1:100,8]
+lynchrdfs <-simrel[(100+1):(2*100),8]
+lynchrdhs <-simrel[((2*100) + 1): (3*100),8]
+lynchrdur <-simrel[((3*100)+1):(4*100),8]
 
 trioml <-rep("tri",100)
 wang <-rep("wang",100)
@@ -92,10 +93,10 @@ hs <- rep("Half-Sibs", (4 * 100))
 ur <- rep("Unrelated", (4 * 100))
 relationship <- c(po, fs, hs, ur)
 
-relatednesspo <- c(triomlpo , wangpo , quellergtpo , lynchrdpo)
-relatednessfs <- c(triomlfs , wangfs , quellergtfs , lynchrdfs)
-relatednesshs <- c(triomlhs , wanghs , quellergths , lynchrdhs)
-relatednessur <- c(triomlur , wangur , quellergtur , lynchrdur)
+relatednesspo <- c(riomlpo , wangpo , quellerpo , lynchrdpo)
+relatednessfs <- c(triomlfs , wangfs , quellerfs , lynchrdfs)
+relatednesshs <- c(triomlhs , wanghs , quellerhs , lynchrdhs)
+relatednessur <- c(triomlur , wangur , quellerur , lynchrdur)
 Relatedness_Value <- c(relatednesspo , relatednessfs , relatednesshs , relatednessur)
 
 combineddata <- as.data.frame(cbind(Estimator , relationship , Relatedness_Value))
