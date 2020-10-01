@@ -346,7 +346,7 @@ group.df <-left_join(df, wf.df, by="Ind") %>% mutate(pop.prefix = substr(Bay, 1,
 write.table(group.df, "scratch",row.names = FALSE, col.names = FALSE, sep = "\t", quote = FALSE) #write it.
 genotypedata <- readgenotypedata("scratch")# import input file as list (gdata, nloci, nalleles, ninds, freqs)
 
-bay_grouprel <- grouprel(genotypes = genotypedata$gdata, estimatorname = "trioml", usedgroups = "all", iterations= 100)
+grouprel(genotypes = genotypedata$gdata, estimatorname = "trioml", usedgroups = "all", iterations= 100)
 
 
 
