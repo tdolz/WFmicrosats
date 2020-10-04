@@ -55,7 +55,7 @@ length(locNames(wfpopLD))# check number of loci in genind obj
 ### Create the clean dataset
 #remove loci previously determined to be out of HWE
 setPop(wfpop) <-~Ocean
-hw.test(wfpop, B=1000) #permutation based
+#hw.test(wfpop, B=1000) #permutation based
 
 wfpopCLEAN <-genclone2genind(wfpop)
 all_loci <- locNames(wfpopCLEAN)# create vector of all loci
@@ -64,20 +64,28 @@ keeploc <- setdiff(all_loci, removeloc)# create list of loci to keep
 wfpopCLEAN <- wfpopCLEAN[loc = keeploc]# filter loci in genind object
 length(locNames(wfpopCLEAN))
 wfpopCLEAN <- wfpopCLEAN %>% missingno("geno", cutoff=0.0) 
-hw.test(wfpopCLEAN, B=1000)
+#hw.test(wfpopCLEAN, B=1000)
 
 #Create the YOY 2016 only dataset
 popNames(wfpopLD)
-setPop(wfpopLD) <-~Bay/Con/Year
+setPop(wfpopLD) <-~Bay
+setPop(wfpopLD) <-~Ocean/Bay/Con/Year
 
 wfyoy <-popsub(wfpopLD, blacklist=c("Atl_Mt_3_2015","Atl_Mt_4_2015","Atl_Mt_5_2015","Atl_Mt_3_2016","Atl_Mt_4_2016","Atl_Mt_5_2016"))
 setPop(wfyoy) <-~Bay
 
-wfyoy16 <-popsub(wfpopLD, blacklist=c("Atl_Mt_1_2015","Atl_2_2015","Atl_Mt_3_2015","Atl_Mt_4_2015","Atl_Mt_5_2015","Atl_Mt_3_2016","Atl_Mt_4_2016","Atl_Mt_5_2016", "Shin_1_2017", "Shin_2_2017"))
+wfyoy16 <-popsub(wfpopLD, blacklist=c("Atl_Mt_1_2015","Atl_Mt_2_2015","Atl_Mt_3_2015","Atl_Mt_4_2015","Atl_Mt_5_2015","Atl_Mt_3_2016","Atl_Mt_4_2016","Atl_Mt_5_2016", "Atl_Shin_1_2017", "Atl_Shin_2_2017"))
 setPop(wfyoy16) <-~Bay
 
+shinyoy <- popsub(wfpopLD, sublist=c("Atl_Shin_1_2016", "Atl_Shin_2_2016", "Atl_Shin_1_2017","Atl_Shin_2_2017"))
+setPop(shinyoy) <-~Bay/Con/Year
+
+setPop(wfpopLD) <-~Bay/Con
+mtpop <-popsub(wfpopLD, sublist=c("Mt_1","Mt_2","Mt_3","Mt_4"))
+setPop(mtpop) <-~Bay/Con/Year
+
 ### REMEMEBER TO TURN THIS ON AND OFF. 
-wfpopLD <-wfyoy16
+wfpopLD <-mtpop
 
 ######## Pairwise Relatedness ######
 
@@ -85,13 +93,24 @@ wfpopLD <-wfyoy16
 # for now, Shannon's way. https://gist.github.com/sjoleary/3efd4a7d56b115fad319781298765a31
 
 #convert to the right data format
-setPop(wfpopLD) <-~Bay
+setPop(wfpopLD) <-~Bay/Con/Year
 df <-genind2df(wfpopLD, usepop = FALSE, oneColPerAll = TRUE) 
 df$Ind <- rownames(df)
 df <-df[,c(35,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34)]
 df[df=="NA"] <- 0 # missing data must be 0
 write.table(df, "scratch",row.names = FALSE, col.names = FALSE, sep = "\t", quote = FALSE) #write it.
 genotypedata <- readgenotypedata("scratch")# import input file as list (gdata, nloci, nalleles, ninds, freqs)
+
+### for the clean dataset analysis only. 
+#setPop(wfpopLD) <-~Bay
+#df <-genind2df(wfpopLD, usepop = FALSE, oneColPerAll = TRUE) 
+#df$Ind <- rownames(df)
+#df <-df[,c(19,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18)]
+#df[df=="NA"] <- 0 # missing data must be 0
+#write.table(df, "scratch",row.names = FALSE, col.names = FALSE, sep = "\t", quote = FALSE) #write it.
+#genotypedata <- readgenotypedata("scratch")# import input file as list (gdata, nloci, nalleles, ninds, freqs)
+
+
 
 #if you don't want to do them all again, try just doing one... 
 simdata <-familysim(genotypedata$freqs,100)
@@ -166,24 +185,30 @@ relply<- ddply(relsim, Estimator~relationship,summarize, mean.rel = mean(Related
 relply
 
 #from the abbreviated simulation
-relsim <- as.data.frame(simreltri)
-relply<- ddply(relsim, ~group,summarize, mean.rel = mean(trioml), LIrel = quantile(trioml,0.05), HIrel = quantile(trioml, 0.95), medianrel= quantile(trioml, 0.5))
-relply
+  relsim2 <- as.data.frame(simreltri)
+  relply2<- ddply(relsim, ~group,summarize, mean.rel = mean(trioml), LIrel = quantile(trioml,0.05), HIrel = quantile(trioml, 0.95), medianrel= quantile(trioml, 0.5))
+  relply2
+
+#thresholds - remember to change these out
+halfsibs <-0.25355
+fullsibs <-0.53000
+parentoffspring <-0.52160
+unrelated <-0.03975
 
 
-#trioml estimate (Wang) - Can't do this because it crashes R studio. 
+#trioml estimate (Wang) 
 relatedness_triad <- coancestry(genotypedata$gdata,trioml = 1)
 relatedT <- relatedness_triad$relatedness %>%
   dplyr::select(pair.no, ind1.id, ind2.id, trioml)
 
 library("readr")
-write_delim(relatedT, "pairwise_relatedness_triomlYOY")
+write_delim(relatedT, "pairwise_relatedness_triomlshin")
 
 # write inbreeding to file
 inbreed <- relatedness_triad$inbreeding %>%
   dplyr::select(ind.id, L3, LH) %>%
   dplyr::rename(INDV = ind.id)
-write_delim(inbreed, "inbreedingYOY")
+write_delim(inbreed, "inbreeding")
 
 ######Inbreeding########
 # inbreeding  - you can put the values from the simulation in later. 
@@ -193,7 +218,7 @@ ggplot(inbreed, aes(x = L3)) +
              color = "black", linetype = "dashed", size = 0.5) +
   theme_cowplot()+
   labs(x = "inbreeding coefficient (Fis)", y = "individuals") 
-ggsave('inbreedldYOY.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+ggsave('inbreedldMT.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
 
 #inbreeding by bay. 
 popinfo <-dplyr::select(wfpop4df, Ind, Pop) %>% separate(Pop, c("Ocean","Bay","Con","Year"), remove=FALSE)
@@ -211,39 +236,35 @@ inbreed %>%
   xlab(' ')+ylab("Inbreeding Coefficient (Fis)")+ 
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('indvinbreeding.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 8, height = 10)
+ggsave('indvinbreedingMT.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 8, height = 10)
 #it may be more appropriate to compare YOY only. 
 
 ## anova to compare inbreeding between bays. 
 library("agricolae")
-anoin <-lm(L3~Bay, na.action=na.omit, data=inbreed)
+anoin <-lm(L3~Con*Year, na.action=na.omit, data=inbreed)
 ano2 <-car::Anova(anoin)
 ano2
 ano3<-df.residual(anoin)
 MSerror<-deviance(anoin)/ano3
-comparison <- HSD.test(anoin,c("Bay"),MSerror=MSerror, unbalanced=TRUE,alpha=0.05, group=TRUE)
+comparison <- HSD.test(anoin,c("Con","Year"),MSerror=MSerror, unbalanced=TRUE,alpha=0.05, group=TRUE)
 comparison
 
 
 
 # relatedness (TRIOML)- remember to change these values depending on what dataset you are using. 
 relatedT %>%
-  filter(trioml > 0) %>%
+  #filter(trioml > 0) %>%
 ggplot(aes(x = trioml)) +
   geom_histogram(binwidth = 0.001, color = "light grey", fill = "light grey") +
   geom_vline(aes(xintercept = mean(trioml, na.rm = TRUE)),
              color = "black", linetype = "dashed", size = 0.5) +
-  #geom_vline(aes(xintercept = quantile(lynchrd, 0.95)),
-             #color = "darkred", linetype = "dashed", size = 0.5) +
-  geom_vline(aes(xintercept = 0.04), color = "black", linetype = "dashed", size = 0.5) + #the estimated mean value for unrelated in the simulation
-  geom_vline(aes(xintercept = 0.25), color = "black", linetype = "dashed", size = 0.5) + #the estimated mean value for half sibs in the simulation
-  geom_vline(aes(xintercept = 0.52), color = "black", linetype = "dashed", size = 0.5) + #the estimated mean value for full sibs in the simulation
-  #geom_vline(aes(xintercept = 0.54), color = "black", linetype = "dashed", size = 0.5) + #the estimated mean value for parent offspring in the simulation
-  #geom_vline(aes(xintercept = 0.08),color = "darkblue", linetype = "dotted", size = 0.5) + #the Lynchrd 0.05 quantile on the simulated half sibs relationship
-  #geom_vline(aes(xintercept = 0.49), color = "darkblue", linetype = "dotted", size = 0.5) + #red is the 0.95 quantile
+  ylim(0, 500)+
+  geom_vline(aes(xintercept = unrelated), color = "black", linetype = "dashed", size = 0.5) + #the estimated mean value for unrelated in the simulation
+  geom_vline(aes(xintercept = halfsibs), color = "black", linetype = "dashed", size = 0.5) + #the estimated mean value for half sibs in the simulation
+  geom_vline(aes(xintercept = fullsibs), color = "black", linetype = "dashed", size = 0.5) + #the estimated mean value for full sibs in the simulation
   labs(x = "relatedness", y = "number of pairs")+
   theme_cowplot()
-ggsave("pairwiserelatenessTRIOMLYOY_17.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+ggsave("pairwiserelatenessTRI.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
 dev.off()
 
 
@@ -252,45 +273,74 @@ h <-melt(relatedT, id=c("pair.no","ind1.id","ind2.id"))
 h <-dplyr::rename(h, Estimator=variable,Relatedness_Value=value)
 
 #how many of each? (based on estimator mean)
-filter(relatedT, trioml > 0.099575) %>% n_distinct()
-filter(relatedT, trioml > 0.25) %>% n_distinct()
-filter(relatedT,trioml > 0.25 & trioml <= 0.52) %>% n_distinct() #how many half sibs
-filter(relatedT, trioml > 0.52) %>% n_distinct() #full sibs or parent offspring. 
-filter(relatedT, trioml > 0.54) %>% n_distinct() #parent offspring
 n_distinct(relatedT)
+filter(relatedT,trioml > halfsibs & trioml <= fullsibs) %>% n_distinct() #how many half sibs
+filter(relatedT, trioml > fullsibs) %>% n_distinct() #full sibs or parent offspring. 
+filter(relatedT, trioml > parentoffspring) %>% n_distinct() #parent offspring
+
 
 
 #create a dataset that combines fish pairs with information about their population
-popinfo <-dplyr::select(wfpop4df, Ind, Pop) %>% separate(Pop, c("Ocean","Bay","Con","Year"), remove=FALSE)
+popinfo <-dplyr::select(wfpop4df, Ind, Pop) %>% 
+  separate(Pop, c("Ocean","Bay","Con","Year"), remove=FALSE)%>%
+  unite(ConYear, Con, Year, remove=FALSE)
 wf.df <-mutate(popinfo,ind1.id=Ind,ind2.id=Ind)
 hs <-left_join(h,wf.df, by=c("ind1.id"))
-hs <-dplyr::rename(hs, Bay1=Bay,Con1=Con,Year1=Year)
+hs <-dplyr::rename(hs, Bay1=Bay,Con1=Con,Year1=Year, ConYear1 = ConYear)
 hs <-dplyr::select(hs,-ind2.id.y) %>% dplyr::rename(ind2.id =ind2.id.x)
-hs <-left_join(hs,wf.df,by=c("ind2.id")) %>% dplyr::rename(Bay2=Bay,Con2=Con,Year2=Year)
+hs <-left_join(hs,wf.df,by=c("ind2.id")) %>% dplyr::rename(Bay2=Bay,Con2=Con,Year2=Year,ConYear2 = ConYear)
 hs <-dplyr::rename(hs,ind1.id=ind1.id.x) %>% dplyr::select(-ind1.id.y,-Ind.y, -Ind.x)
 #get rid of "sketchy" individuals
 hs <-filter(hs,!is.na(Bay2))
 hs <-filter(hs,!is.na(Bay1))
 
+ddply(hs, ~ConYear1, summarize, avr = mean(Relatedness_Value), sdrel =sd(Relatedness_Value),se= sem(Relatedness_Value),LCI = quantile(Relatedness_Value, 0.025), UCI= quantile(Relatedness_Value, 0.975))
+
 #find related fish from the same bay!
-same.bay <-filter(hs, Bay1==Bay2)
+#same.bay <-filter(hs, Bay1==Bay2)
+same.bay <-filter(hs, ConYear1==ConYear2)
+
 #mean relatedness value of same bay pairs
-ddply(same.bay, ~Bay1, summarize, avr = mean(Relatedness_Value), sdrel =sd(Relatedness_Value),se= sem(Relatedness_Value),LCI = quantile(Relatedness_Value, 0.025), UCI= quantile(Relatedness_Value, 0.975))
-filter(same.bay,Relatedness_Value >= 0.25 & Relatedness_Value <= 0.52) %>% n_distinct() #how many half sibs
-filter(same.bay,Relatedness_Value > 0.52) %>% n_distinct() #how many full sibs
+ddply(same.bay, ~ConYear1, summarize, avr = mean(Relatedness_Value), sdrel =sd(Relatedness_Value),se= sem(Relatedness_Value),LCI = quantile(Relatedness_Value, 0.025), UCI= quantile(Relatedness_Value, 0.975))
+n_distinct(same.bay)
+filter(same.bay,Relatedness_Value >= halfsibs & Relatedness_Value <= fullsibs) %>% n_distinct() #how many half sibs
+filter(same.bay,Relatedness_Value > fullsibs) %>% n_distinct() #how many full sibs
+filter(same.bay,Relatedness_Value > parentoffspring) %>% n_distinct()
 
 #relatedness diff bays
-diff.bay <-filter(hs, Bay1!=Bay2)
+diff.bay <-filter(hs, ConYear1!=ConYear2)
 #mean relatedness value of diff bay pairs
-ddply(diff.bay, Bay2~Bay1, summarize, avr = mean(Relatedness_Value), sdrel =sd(Relatedness_Value),se= sem(Relatedness_Value),LCI = quantile(Relatedness_Value, 0.025), UCI= quantile(Relatedness_Value, 0.975))
-filter(diff.bay,Relatedness_Value >= 0.25 & Relatedness_Value <= 0.52) %>% n_distinct() #how many half sibs
-filter(diff.bay,Relatedness_Value > 0.52) %>% n_distinct() #how many full sibs
+ddply(diff.bay, ConYear2~ConYear1, summarize, avr = mean(Relatedness_Value), sdrel =sd(Relatedness_Value),se= sem(Relatedness_Value),LCI = quantile(Relatedness_Value, 0.025), UCI= quantile(Relatedness_Value, 0.975))
+n_distinct(diff.bay)
+filter(diff.bay,Relatedness_Value >= halfsibs & Relatedness_Value <= fullsibs) %>% n_distinct() #how many half sibs
+filter(diff.bay,Relatedness_Value > fullsibs) %>% n_distinct() #how many full sibs
+filter(diff.bay,Relatedness_Value > parentoffspring) %>% n_distinct() #how many full sibs
+
+### diff bay heatmap. 
+cy1 <- fct_relevel(diff.bay$ConYear1, c("1_2015","2_2015","3_2015","4_2015", "1_2016","2_2016","3_2016","4_2016"))
+cy2 <- fct_relevel(diff.bay$ConYear2, c("1_2015","3_2015","4_2015", "1_2016","2_2016","3_2016","4_2016"))
+
+ ggplot(diff.bay, aes(cy1,cy2))+
+  geom_tile(aes(fill=Relatedness_Value), show.legend = TRUE)+
+  #scale_fill_manual(values=cols)+
+ # geom_text(color="white", size=3)+
+  coord_fixed(ratio = 1) +
+  xlab("")+ylab("")+
+  theme(axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
+
+
+
+
 
 ##barplot of mean relatedness from same bay pairs. 
 drabcolors <-c("#d0d1e6","#a6bddb", "#67a9cf", "#1c9099", "#016450")
+shincolors2 <-c("#29bf12","#abff4f","#3f8efc","#3b28cc")
+shincolors <-c("#143601","#68b0ab","#538d22","#aad576")
+Mtcolors <-c("#f4d35e","#ee964b","#f95738","#ee4266","#15616d","#0d3b66")
+Mtcolors2 <-c("#f72585","#7209b7","#4361ee","#4cc9f0")
 
 same.bay %>%
-  ggplot(aes(x=fct_rev(Bay1),y=Relatedness_Value),fill=Bay1)+
+  ggplot(aes(x=fct_rev(ConYear1),y=Relatedness_Value),fill=ConYear1)+
   #geom_boxplot(aes(fill=Bay1))+ 
   ggplot2::stat_summary(
     fun.data = mean_sdl,
@@ -298,15 +348,15 @@ same.bay %>%
     geom = "pointrange",
     position = ggplot2::position_nudge(x = 0.05, y = 0)
   ) +
-  geom_flat_violin(aes(fill=Bay1),position = position_nudge(x = .1, y = 0),adjust=2, trim = FALSE)+
-  scale_fill_manual(name = "Bay",values = drabcolors)+coord_flip()+ 
-  geom_hline(aes(yintercept = 0.25), color = "black", linetype = "dotted", size = 0.7) + #the estimated mean value for half sibs in the simulation
-  geom_hline(aes(yintercept = 0.52), color = "black", linetype = "dashed", size = 0.5) + #the estimated mean value for full sibs in the simulation
-  #geom_hline(aes(yintercept = 0.50), color = "darkgreen", linetype = "dashed", size = 0.7) + #the estimated mean value for parent offspring in the simulation
-  xlab(' ')+ylab("Mean Relatedness")+
+  geom_flat_violin(aes(fill=ConYear1),position = position_nudge(x = .1, y = 0),adjust=2, trim = FALSE)+
+  #scale_fill_manual(name = "ConYear",values = shincolors)+coord_flip()+ 
+  scale_fill_grey()+coord_flip()+ 
+  geom_hline(aes(yintercept = halfsibs), color = "black", linetype = "dotted", size = 0.7) + #the estimated mean value for half sibs in the simulation
+  geom_hline(aes(yintercept = fullsibs), color = "black", linetype = "dashed", size = 0.5) + #the estimated mean value for full sibs in the simulation
+  xlab(' ')+ylab("Pairwise Relatedness")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('samebay_YOY.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
+ggsave('samebay_MT.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
 
 ##violin plot of diff bay pairs
 diff.bay <-mutate(diff.bay, pair1 = pmin(Bay1,Bay2), pair2 =pmax(Bay1,Bay2)) %>% 
@@ -323,23 +373,23 @@ diff.bay %>%
     position = ggplot2::position_nudge(x = 0.05, y = 0)
   ) +coord_flip()+ 
   geom_flat_violin(aes(fill=Bay1),position = position_nudge(x = .1, y = 0),adjust=2, trim = FALSE)+
-  scale_fill_manual(name = "Bay",values = drabcolors)+
-  geom_hline(aes(yintercept = 0.25), color = "black", linetype = "dotted", size = 0.7) + #the estimated mean value for half sibs in the simulation
-  geom_hline(aes(yintercept = 0.52), color = "black", linetype = "dashed", size = 0.5) + #the estimated mean value for full sibs in the simulation
-  #geom_hline(aes(yintercept = 0.50), color = "darkgreen", linetype = "dashed", size = 0.7) + #the estimated mean value for parent offspring in the simulation
-  xlab(' ')+ylab("Mean Relatedness")+
+  #scale_fill_manual(name = "Bay",values = drabcolors)+
+  scale_fill_grey()+
+  geom_hline(aes(yintercept = halfsibs), color = "black", linetype = "dotted", size = 0.7) + #the estimated mean value for half sibs in the simulation
+  geom_hline(aes(yintercept = fullsibs), color = "black", linetype = "dashed", size = 0.5) + #the estimated mean value for full sibs in the simulation
+  xlab(' ')+ylab("Pairwise Relatedness")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('diffbay_YOY.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
+ggsave('diffbay_CLEAN.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
 
 #in groups and out groups
 same.bay <-mutate(same.bay, io = "same")
 diff.bay <-mutate(diff.bay, io = "diff")
 inout <- bind_rows(same.bay, diff.bay)
-inout <-unite(inout, ioo, Bay1, io, sep="_", remove=FALSE)
+inout <-unite(inout, ioo, Bay1, io, sep="_", remove=FALSE) 
 
 inout %>%
-  ggplot(aes(x=fct_rev(Bay1),y=Relatedness_Value))+ # bay pairs
+  ggplot(aes(x=fct_rev(ConYear1),y=Relatedness_Value))+ # bay pairs
   #geom_boxplot(aes(fill=Bay1))+ coord_flip()+
   ggplot2::stat_summary(
     fun.data = mean_sdl,
@@ -347,22 +397,22 @@ inout %>%
     geom = "pointrange",
     position = ggplot2::position_nudge(x = 0.05, y = 0)
   ) +coord_flip()+ 
-  geom_flat_violin(aes(fill=Bay1),position = position_nudge(x = .1, y = 0),adjust=2, trim = FALSE)+
-  scale_fill_manual(name = "Bay",values = drabcolors)+
-  geom_hline(aes(yintercept = 0.04), color = "grey", linetype = "dotted", size = 0.7) + #the estimated mean value for unrelated indv in the simulation
-  geom_hline(aes(yintercept = 0.25), color = "grey", linetype = "dotted", size = 0.7) + #the estimated mean value for half sibs in the simulation
-  geom_hline(aes(yintercept = 0.52), color = "grey", linetype = "dotted", size = 0.7) + #the estimated mean value for full sibs in the simulation
-  #geom_hline(aes(yintercept = 0.54), color = "grey", linetype = "dotted", size = 0.7) + #the estimated mean value for full sibs in the simulation
-   xlab(' ')+ylab("Mean Relatedness")+ 
+  geom_flat_violin(aes(fill=ConYear1),position = position_nudge(x = .1, y = 0),adjust=2, trim = FALSE)+
+  #scale_fill_manual(name = "Bay",values = shincolors2)+
+  scale_fill_grey()+
+  geom_hline(aes(yintercept = unrelated), color = "grey", linetype = "dotted", size = 0.7) + #the estimated mean value for unrelated indv in the simulation
+  geom_hline(aes(yintercept = halfsibs), color = "grey", linetype = "dotted", size = 0.7) + #the estimated mean value for half sibs in the simulation
+  geom_hline(aes(yintercept = fullsibs), color = "grey", linetype = "dotted", size = 0.7) + #the estimated mean value for full sibs in the simulation
+   xlab(' ')+ylab("Pairwise Relatedness")+ 
   facet_grid(~io, scales="free")+
   theme(axis.text = element_text(size = 16),axis.title = element_text(size = 16),panel.background = element_rect(fill = 'white', colour = 'black'),
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('inandoutgroupsYOY.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 6)
+ggsave('inandoutgroupsMT.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 6)
 #it may be more appropriate to compare YOY only. 
 
 ## anova to compare relatedness and ingroup outgroup
 library("agricolae")
-anorel <-lm(Relatedness_Value~io*Bay1, na.action=na.omit, data=inout)
+anorel <-lm(Relatedness_Value~Bay1*io, na.action=na.omit, data=inout)
 ano2 <-car::Anova(anorel)
 ano2
 ano3<-df.residual(anorel)
@@ -371,13 +421,37 @@ comparison <- HSD.test(anorel,c("io","Bay1"),MSerror=MSerror, unbalanced=TRUE,al
 comparison
 
 ## anova to compare relatedness and ingroup outgroup
-anorel <-lm(Relatedness_Value~Bay1, na.action=na.omit, data=same.bay)
+library("agricolae")
+anorel <-lm(Relatedness_Value~ioo, na.action=na.omit, data=inout)
 ano2 <-car::Anova(anorel)
 ano2
 ano3<-df.residual(anorel)
 MSerror<-deviance(anorel)/ano3
-comparison <- HSD.test(anorel,c("Bay1"),MSerror=MSerror, unbalanced=TRUE,alpha=0.05, group=TRUE)
+comparison <- HSD.test(anorel,"ioo",MSerror=MSerror, unbalanced=TRUE,alpha=0.05, group=TRUE)
 comparison
+
+# same bays
+anorel <-lm(Relatedness_Value~Con1*Year1, na.action=na.omit, data=same.bay)
+ano2 <-car::Anova(anorel)
+ano2
+ano3<-df.residual(anorel)
+MSerror<-deviance(anorel)/ano3
+comparison <- HSD.test(anorel,c("Con1","Year1"),MSerror=MSerror, unbalanced=TRUE,alpha=0.05, group=TRUE)
+comparison
+
+#diff bay
+anorel <-lm(Relatedness_Value~ConYear1, na.action=na.omit, data=diff.bay)
+ano2 <-car::Anova(anorel)
+ano2
+ano3<-df.residual(anorel)
+MSerror<-deviance(anorel)/ano3
+comparison <- HSD.test(anorel,c("ConYear1"),MSerror=MSerror, unbalanced=TRUE,alpha=0.05, group=TRUE)
+comparison
+
+#pairwise tests within each bay between same bay and diff bay
+pairwise.t.test(same.bay$Relatedness_Value,same.bay$Bay1, pool.sd=FALSE)
+
+
 
 
 
@@ -385,9 +459,13 @@ comparison
 ############ group relatedness ##############
 #format data so that first two letters of IND denote group name, then into gdata format
 wf.df <-dplyr::select(wf.df, -ind1.id, -ind2.id) 
-wf.df <-dplyr::rename(wf.df, Ind=INDV)
-group.df <-left_join(df, wf.df, by="Ind") %>% mutate(pop.prefix = substr(Bay, 1,2)) %>% 
-  unite(name, pop.prefix, Ind, sep="_", remove =TRUE) %>% dplyr::select(-Pop, -Ocean, -Bay, -Con, -Year)
+#wf.df <-dplyr::rename(wf.df, Ind=INDV)
+group.df <-left_join(df, wf.df, by="Ind") %>% 
+  #mutate(pop.prefix = substr(Bay, 1,2)) %>% 
+  #mutate(pop.prefix = ifelse(ConYear == "1_2016", "FE", ifelse(ConYear=="1_2017","SE",ifelse(ConYear=="2_2016","FL","SL"))))%>%
+  mutate(pop.prefix = ifelse(ConYear == "1_2015", "FE", ifelse(ConYear=="1_2016","SE",ifelse(ConYear=="2_2015","FL",
+                                  ifelse(ConYear=="2_2016","SL",ifelse(ConYear=="3_2016","AM",ifelse(ConYear=="3_2015","AM",ifelse(ConYear=="4_2015","AR","AR"))))))))%>%
+  unite(name, pop.prefix, Ind, sep="_", remove =TRUE) %>% dplyr::select(-Pop, -Ocean, -Bay, -Con, -Year, -ConYear)
 write.table(group.df, "scratch",row.names = FALSE, col.names = FALSE, sep = "\t", quote = FALSE) #write it.
 genotypedata <- readgenotypedata("scratch")# import input file as list (gdata, nloci, nalleles, ninds, freqs)
 
@@ -395,10 +473,8 @@ genotypedata <- readgenotypedata("scratch")# import input file as list (gdata, n
 #re-run overnight
 relbay <- grouprel(genotypes = genotypedata$gdata, estimatorname = "trioml", usedgroups = "all", iterations= 100)
 
-#re run 
-shinrel <-grouprel(genotypes = genotypedata$gdata, estimatorname = "trioml", usedgroups = "Sh", iterations= 100)
 
-#for now...
+#access the files and manipulate them for graphs etc. 
 exprel <-read.csv("expectedrel.csv",header=TRUE)
 names(exprel) <-c("sim","Napeague","Moriches","Jamaica","Mattituck","Shinnecock", "ALL")
 
