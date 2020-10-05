@@ -33,8 +33,8 @@ sem <-function(x) sd(x)/sqrt(length(x))
 
 
 ##### Formating the dataset #####
-wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept20204genalex_doubl0.csv")
-wfpop4df <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept2020_doubl0.csv", header = TRUE) #csv version 
+wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept20204genalex_doubl0ABC.csv")
+wfpop4df <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept2020_doubl0ABC.csv", header = TRUE) #csv version 
 
 
 splitStrata(wfpop) <-~Ocean/Bay/Con/Year
@@ -71,10 +71,10 @@ popNames(wfpopLD)
 setPop(wfpopLD) <-~Bay
 setPop(wfpopLD) <-~Ocean/Bay/Con/Year
 
-wfyoy <-popsub(wfpopLD, blacklist=c("Atl_Mt_3_2015","Atl_Mt_4_2015","Atl_Mt_5_2015","Atl_Mt_3_2016","Atl_Mt_4_2016","Atl_Mt_5_2016"))
+wfyoy <-popsub(wfpopLD, blacklist=c("Atl_Mt_3_adults","Atl_Mt_4_adults","Atl_Mt_5_2015","Atl_Mt_5_2016"))
 setPop(wfyoy) <-~Bay
 
-wfyoy16 <-popsub(wfpopLD, blacklist=c("Atl_Mt_1_2015","Atl_Mt_2_2015","Atl_Mt_3_2015","Atl_Mt_4_2015","Atl_Mt_5_2015","Atl_Mt_3_2016","Atl_Mt_4_2016","Atl_Mt_5_2016", "Atl_Shin_1_2017", "Atl_Shin_2_2017"))
+wfyoy16 <-popsub(wfpopLD, blacklist=c("Atl_Mt_1_2015","Atl_Mt_2_2015","Atl_Mt_3_adults","Atl_Mt_4_adults","Atl_Mt_5_2015","Atl_Mt_5_2016", "Atl_Shin_1_2017", "Atl_Shin_2_2017"))
 setPop(wfyoy16) <-~Bay
 
 shinyoy <- popsub(wfpopLD, sublist=c("Atl_Shin_1_2016", "Atl_Shin_2_2016", "Atl_Shin_1_2017","Atl_Shin_2_2017"))
@@ -114,7 +114,7 @@ genotypedata <- readgenotypedata("scratch")# import input file as list (gdata, n
 
 #if you don't want to do them all again, try just doing one... 
 simdata <-familysim(genotypedata$freqs,100)
-outputTRI <- coancestry(simdata, trioml=1)
+outputTRI <- coancestry(simdata, trioml=2)
 simreltri <- cleanuprvals(outputTRI$relatedness , 100)
 
 #custom comparisons;
@@ -186,29 +186,36 @@ relply
 
 #from the abbreviated simulation
   relsim2 <- as.data.frame(simreltri)
-  relply2<- ddply(relsim, ~group,summarize, mean.rel = mean(trioml), LIrel = quantile(trioml,0.05), HIrel = quantile(trioml, 0.95), medianrel= quantile(trioml, 0.5))
+  relply2<- ddply(relsim, ~group,summarize, mean.rel = mean(trioml),semrel =sem(trioml), LIrel = quantile(trioml,0.05), HIrel = quantile(trioml, 0.95), medianrel= quantile(trioml, 0.5))
   relply2
 
-#thresholds - remember to change these out
-halfsibs <-0.25355
-fullsibs <-0.53000
-parentoffspring <-0.52160
-unrelated <-0.03975
+#thresholds - the MEAN, you potato
+halfsibs <-0.250436
+fullsibs <-0.53108
+parentoffspring <-0.533866
+unrelated <-0.04928
 
 
 #trioml estimate (Wang) 
-relatedness_triad <- coancestry(genotypedata$gdata,trioml = 1)
+relatedness_triad <- coancestry(genotypedata$gdata,trioml = 1) #remember to turn on 1 or 2
 relatedT <- relatedness_triad$relatedness %>%
   dplyr::select(pair.no, ind1.id, ind2.id, trioml)
 
+relatedCI <- relatedness_triad$relatedness.ci95 %>%
+  dplyr::select(pair.no, ind1.id, ind2.id, trioml.low, trioml.high)
+
 library("readr")
-write_delim(relatedT, "pairwise_relatedness_triomlshin")
+write_delim(relatedT, "pairwise_relatedness_trioml")
 
 # write inbreeding to file
 inbreed <- relatedness_triad$inbreeding %>%
   dplyr::select(ind.id, L3, LH) %>%
   dplyr::rename(INDV = ind.id)
 write_delim(inbreed, "inbreeding")
+
+inbreed.ci <-relatedness_triad$inbreeding.ci95%>%
+  dplyr::select(ind.id, L3.low, L3.high, LH.low, LH.high, LR.low, LR.high) %>%
+  dplyr::rename(INDV = ind.id)
 
 ######Inbreeding########
 # inbreeding  - you can put the values from the simulation in later. 
@@ -218,7 +225,7 @@ ggplot(inbreed, aes(x = L3)) +
              color = "black", linetype = "dashed", size = 0.5) +
   theme_cowplot()+
   labs(x = "inbreeding coefficient (Fis)", y = "individuals") 
-ggsave('inbreedldMT.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+ggsave('inbreedldall.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
 
 #inbreeding by bay. 
 popinfo <-dplyr::select(wfpop4df, Ind, Pop) %>% separate(Pop, c("Ocean","Bay","Con","Year"), remove=FALSE)
@@ -236,7 +243,7 @@ inbreed %>%
   xlab(' ')+ylab("Inbreeding Coefficient (Fis)")+ 
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('indvinbreedingMT.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 8, height = 10)
+ggsave('indvinbreeding.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 8, height = 10)
 #it may be more appropriate to compare YOY only. 
 
 ## anova to compare inbreeding between bays. 
@@ -264,7 +271,7 @@ ggplot(aes(x = trioml)) +
   geom_vline(aes(xintercept = fullsibs), color = "black", linetype = "dashed", size = 0.5) + #the estimated mean value for full sibs in the simulation
   labs(x = "relatedness", y = "number of pairs")+
   theme_cowplot()
-ggsave("pairwiserelatenessTRI.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+ggsave("pairwiserelatenessTRIall.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
 dev.off()
 
 
@@ -294,11 +301,69 @@ hs <-dplyr::rename(hs,ind1.id=ind1.id.x) %>% dplyr::select(-ind1.id.y,-Ind.y, -I
 hs <-filter(hs,!is.na(Bay2))
 hs <-filter(hs,!is.na(Bay1))
 
+filter(hs, Relatedness_Value > 0) %>% n_distinct #how many greater than 0
+
+
 ddply(hs, ~ConYear1, summarize, avr = mean(Relatedness_Value), sdrel =sd(Relatedness_Value),se= sem(Relatedness_Value),LCI = quantile(Relatedness_Value, 0.025), UCI= quantile(Relatedness_Value, 0.975))
 
+half_sibs <-filter(hs, Relatedness_Value > halfsibs & Relatedness_Value < fullsibs)
+full_sibs <-filter(hs, Relatedness_Value > fullsibs)
+all_sibs <-filter(hs, Relatedness_Value > halfsibs)
+all_count <-ddply(hs, ConYear1~ConYear2, summarize, ALL = n_distinct(pair.no))
+hs_count <-ddply(half_sibs, ConYear1~ConYear2, summarize, HS = n_distinct(pair.no)) 
+fs_count <-ddply(full_sibs, ConYear1~ConYear2, summarize, FS = n_distinct(pair.no))
+as_count <-ddply(all_sibs, ConYear1~ConYear2, summarize, AS = n_distinct(pair.no))
+sum_rel <-ddply(hs, ConYear1~ConYear2, summarize, avr = mean(Relatedness_Value), sdrel =sd(Relatedness_Value),se= sem(Relatedness_Value),LCI = quantile(Relatedness_Value, 0.025), UCI= quantile(Relatedness_Value, 0.975))
+sum_rel <-full_join(sum_rel, hs_count, by = c("ConYear1","ConYear2"))
+sum_rel <-full_join(sum_rel, fs_count, by = c("ConYear1","ConYear2"))
+sum_rel <-full_join(sum_rel, as_count, by = c("ConYear1","ConYear2"))
+sum_rel <-full_join(sum_rel, all_count, by = c("ConYear1","ConYear2"))
+sum_rel <-mutate(sum_rel, percentsib = round((HS/ALL)*1000,0)) #in a population of 1000 individuals, how many half siblings. 
+
+#heatmap
+sum_rel <-mutate(sum_rel, cy1 = pmin(ConYear1,ConYear2), cy2 =pmax(ConYear1,ConYear2)) %>% arrange(cy1)
+#cy1 <- fct_recode(sum_rel$ConYear1, c("1_2015","2_2015","3_2015","4_2015", "1_2016","2_2016","3_2016","4_2016"))
+#cy2 <- fct_recode(sum_rel$ConYear2, c("1_2015","2_2015","3_2015","4_2015", "1_2016","2_2016","3_2016","4_2016"))
+ggplot(sum_rel, aes(cy1, cy2, label= percentsib))+ #switch between AS and percentsib
+  geom_tile(aes(fill=avr), show.legend = TRUE)+
+  #scale_fill_viridis(option="A", direction = -1)+  #A is magma, D is regular viridis
+  #scale_fill_gradient(low ="#ffeda0" , high = "#800026")+ #warm colors
+  scale_fill_gradient(low ="#023858" , high = "#ece7f2")+ #cool colors
+   geom_text(color="white", size=5)+
+  coord_fixed(ratio = 1) +
+  xlab("")+ylab("")+
+  theme(axis.text = element_text(size = 12),axis.title = element_text(size =12),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
+
+#who is producing the half sibs???
+# network plot??? 
+#https://github.com/sctyner/geomnet
+#for now, 
+stack_ind <-unique(c(all_sibs$ind1.id, all_sibs$ind2.id)) 
+
+count_pairs1 <-ddply(all_sibs, ~ind1.id, summarize, pair.num =n_distinct(pair.no)) %>% dplyr::rename(INDV = ind1.id)
+count_pairs2 <-ddply(all_sibs, ~ind2.id, summarize, pair.num =n_distinct(pair.no)) %>% dplyr::rename(INDV = ind2.id)
+stack_pairs <-bind_rows(count_pairs1,count_pairs2) %>%arrange(INDV)
+mean(stack_pairs$pair.num)
+sd(stack_pairs$pair.num)
+max(stack_pairs$pair.num)
+
+#correlation with inbreeding. 
+inbreed <-unite(inbreed, ConYear, Con, Year)
+in_rel <-ddply(inbreed, ~ConYear, summarize, mean.L3 = mean(L3), mean.LH=mean(LH))
+#idk which one to use, so we'll use L3
+in_rel <-mutate(in_rel, ConYear1=ConYear, ConYear2=ConYear)
+sum_rel2 <-left_join(sum_rel, in_rel, by=c("ConYear1")) %>% dplyr::select(-ConYear2.y)%>%
+  dplyr::rename(L3.cy1 = mean.L3, LH.cy1 =mean.LH, ConYear2 = ConYear2.x)
+sum_rel2 <-left_join(sum_rel2, in_rel, by=c("ConYear2")) %>% dplyr::select(-ConYear.x, -ConYear.y, -ConYear1.y)%>%
+  dplyr::rename(L3.cy2 = mean.L3, LH.cy2 =mean.LH, ConYear1 = ConYear1.x)
+
+cor.test(sum_rel2$percentsib, sum_rel2$avr,  method = "pearson", exact=TRUE)
+cor.test(sum_rel2$percentsib, sum_rel2$L3.cy1,method = "pearson", exact=TRUE) #inbreeding of first conyear to percent siblings
+cor.test(sum_rel2$percentsib, sum_rel2$L3.cy2,method = "pearson", exact=TRUE) #inbreeding of second conyear to percent siblings
+
 #find related fish from the same bay!
-#same.bay <-filter(hs, Bay1==Bay2)
-same.bay <-filter(hs, ConYear1==ConYear2)
+same.bay <-filter(hs, Bay1==Bay2)
+#same.bay <-filter(hs, ConYear1==ConYear2)
 
 #mean relatedness value of same bay pairs
 ddply(same.bay, ~ConYear1, summarize, avr = mean(Relatedness_Value), sdrel =sd(Relatedness_Value),se= sem(Relatedness_Value),LCI = quantile(Relatedness_Value, 0.025), UCI= quantile(Relatedness_Value, 0.975))
@@ -308,26 +373,13 @@ filter(same.bay,Relatedness_Value > fullsibs) %>% n_distinct() #how many full si
 filter(same.bay,Relatedness_Value > parentoffspring) %>% n_distinct()
 
 #relatedness diff bays
-diff.bay <-filter(hs, ConYear1!=ConYear2)
+diff.bay <-filter(hs, Bay1!=Bay2)
 #mean relatedness value of diff bay pairs
 ddply(diff.bay, ConYear2~ConYear1, summarize, avr = mean(Relatedness_Value), sdrel =sd(Relatedness_Value),se= sem(Relatedness_Value),LCI = quantile(Relatedness_Value, 0.025), UCI= quantile(Relatedness_Value, 0.975))
 n_distinct(diff.bay)
 filter(diff.bay,Relatedness_Value >= halfsibs & Relatedness_Value <= fullsibs) %>% n_distinct() #how many half sibs
 filter(diff.bay,Relatedness_Value > fullsibs) %>% n_distinct() #how many full sibs
 filter(diff.bay,Relatedness_Value > parentoffspring) %>% n_distinct() #how many full sibs
-
-### diff bay heatmap. 
-cy1 <- fct_relevel(diff.bay$ConYear1, c("1_2015","2_2015","3_2015","4_2015", "1_2016","2_2016","3_2016","4_2016"))
-cy2 <- fct_relevel(diff.bay$ConYear2, c("1_2015","3_2015","4_2015", "1_2016","2_2016","3_2016","4_2016"))
-
- ggplot(diff.bay, aes(cy1,cy2))+
-  geom_tile(aes(fill=Relatedness_Value), show.legend = TRUE)+
-  #scale_fill_manual(values=cols)+
- # geom_text(color="white", size=3)+
-  coord_fixed(ratio = 1) +
-  xlab("")+ylab("")+
-  theme(axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-
 
 
 
@@ -474,19 +526,5 @@ genotypedata <- readgenotypedata("scratch")# import input file as list (gdata, n
 relbay <- grouprel(genotypes = genotypedata$gdata, estimatorname = "trioml", usedgroups = "all", iterations= 100)
 
 
-#access the files and manipulate them for graphs etc. 
-exprel <-read.csv("expectedrel.csv",header=TRUE)
-names(exprel) <-c("sim","Napeague","Moriches","Jamaica","Mattituck","Shinnecock", "ALL")
-
-filter(exprel, Napeague >= 0.03695569) %>% n_distinct #61/100
-filter(exprel, Moriches >= 0.03703134) %>% n_distinct #64/100
-filter(exprel, Jamaica >= 0.03799505) %>% n_distinct #59
-filter(exprel, Shinnecock >= 0.04365348) %>% n_distinct #1  <_this seems wrong. 
-filter(exprel, Mattituck >= 0.04013806) %>% n_distinct #42
-
-exprel %>%
-  ggplot(aes(x=ALL))+
-  geom_histogram(bins=20)
- 
 
 ## make a version of this analysis done with the clean dataset and run overnight. 
