@@ -1,4 +1,4 @@
-#format data for microdrop. 
+#format data for microdrop and NE estimator. 
 
 ###September 19, 2020
 
@@ -34,3 +34,24 @@ check <-filter(microdrop, WF27=="-9")%>%count(Ind); filter(check, n < 2)
 #WF27 was the only problematic one before, and we eliminated that loci in our previous analysis. 
 
 write_delim(microdrop, "microdrop_datafile")
+
+### format for NE estimator
+nepop <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept2020_doubl0ABC.csv", header = TRUE) #csv version 
+
+nepop <-tidyr::separate(nepop, Pop, c("Oc", "Bay", "Con", "Year"))
+nepop16 <-filter(nepop, Year=="2016") %>% dplyr::select(-Oc, -Con, -Year) %>% dplyr::rename(Pop=Bay)
+nepop16 <- dplyr::select(nepop16, -WF01.1, -WF01.2, -WF06.1, -WF06.2, -WF27.1, -WF27.2) #exclude loci with missing data and LD. 
+nepop16 <- tidyr::unite(nepop16, J42, J42.1, J42.2, sep="") %>% 
+  tidyr::unite(WF22, WF22.1, WF22.2, sep="") %>% tidyr::unite(PAM27, PAM27.1, PAM27.2, sep="")%>%
+  tidyr::unite(PAM79, PAM79.1, PAM79.2, sep="") %>% tidyr::unite(WF16, WF16.1, WF16.2, sep="")%>%
+  tidyr::unite(WF33, WF33.1, WF33.2, sep="") %>% tidyr::unite(WF3, WF3.1, WF3.2, sep="")%>%
+  tidyr::unite(WF517, WF517.1, WF517.2, sep="") %>% tidyr::unite(WF196, WF196.1, WF196.2, sep="")%>%
+  tidyr::unite(WF223, WF223.1, WF223.2, sep="") %>% tidyr::unite(WF421, WF421.1, WF421.2, sep="")%>%
+  tidyr::unite(A441, A441.1, A441.2, sep="") %>% tidyr::unite(PAM21, PAM21.1, PAM21.2, sep="")%>%
+  tidyr::unite(Psy087, Psy087.1, Psy087.2, sep="") %>% tidyr::unite(Psy022, Psy022.1, Psy022.2, sep="")%>%
+  tidyr::unite(WF12, WF12.1, WF12.2, sep="") %>% tidyr::unite(WF32, WF32.1, WF32.2, sep="")
+  
+nepop16[nepop16=="00"] <- "000000" # missing data must be -9
+write_delim(nepop16, "nepop_datafile")
+
+#nepop16 <-filter(nepop, Pop %in% c("Atl_Jam_6_2016","Atl_Mor_6_2016","Atl_Mt_1_2016","Atl_Mt_2_2016","Atl_Nap_6_2016","Atl_Shin_1_2016","Atl_Shin_2_2016"))
