@@ -52,6 +52,8 @@ nepop16 <- tidyr::unite(nepop16, J42, J42.1, J42.2, sep="") %>%
   tidyr::unite(WF12, WF12.1, WF12.2, sep="") %>% tidyr::unite(WF32, WF32.1, WF32.2, sep="")
   
 nepop16[nepop16=="00"] <- "000000" # missing data must be -9
+nepop16 <-dplyr::select(nepop16,-Pop)
+
 write_delim(nepop16, "nepop_datafile")
 
 #nepop16 <-filter(nepop, Pop %in% c("Atl_Jam_6_2016","Atl_Mor_6_2016","Atl_Mt_1_2016","Atl_Mt_2_2016","Atl_Nap_6_2016","Atl_Shin_1_2016","Atl_Shin_2_2016"))
