@@ -57,3 +57,39 @@ nepop16 <-dplyr::select(nepop16,-Pop)
 write_delim(nepop16, "nepop_datafile")
 
 #nepop16 <-filter(nepop, Pop %in% c("Atl_Jam_6_2016","Atl_Mor_6_2016","Atl_Mt_1_2016","Atl_Mt_2_2016","Atl_Nap_6_2016","Atl_Shin_1_2016","Atl_Shin_2_2016"))
+
+
+### Format data for COLONY
+### format for NE estimator
+nepop <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept2020_doubl0ABC.csv", header = TRUE) #csv version 
+mtsex <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/fishsex.csv", header = TRUE)
+mtadults <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/mtinfo.csv", header = TRUE)
+
+mtadults <-dplyr::rename(mtadults, sex2=sex, Ind=samp) %>% dplyr::select(-sex2)
+mtadults <-left_join(mtadults, mtsex, by="Ind") %>%mutate(Ind=as.factor(Ind))
+
+nepop<-separate(nepop, Pop, c("Oc","Bay","Con","Year"), remove=FALSE)%>% dplyr::select(-Oc)
+mtpop <- filter(nepop, Bay=="Mt") %>% dplyr::select(-Bay,-Year) 
+mtpop <-left_join(mtpop, mtadults, by=c("Ind"))
+#write.csv(mtpop, file="/Users//tdolan/Documents//WIP research//microsats//colony2//mtpop.csv")
+
+cfs <- filter(mtpop, sex=="F")
+cms <- filter(mtpop, sex=="M")
+ofs <-filter(mtpop, Con %in% c("1","2"))
+
+#all the hatch and spawning dates
+mtage <-read.csv(file="mtcohortreassignAug182020.csv", header=TRUE)
+mtage <-mutate(mtage, bday=as.Date(hatch.date), cohort=as.factor(new.cohort)) %>%slice(1:49) %>% dplyr::select(-old.pop)
+spawndate <-read.csv(file="mtspawndate.csv", header=TRUE)
+#merge spawn date and fish information. 
+spawndate <-dplyr::rename(spawndate, fishID=Tag.ID)
+mtage2 <-left_join(mtage,spawndate, by="fishID")
+
+#join the spawning info to mtadults
+mtage2 <- dplyr::select(mtage2, -cohort)%>% dplyr::rename(Ind=samp, FishID=fishID, location=Location) %>% mutate(Ind=as.factor(Ind))
+mtadults <-dplyr::select(mtadults, -Fin.Clip, -stage, -put.age, -year.class)
+mtinfo <-full_join(mtage2, mtadults, by=c("Ind","Year","FishID","location","TL","catch.date"))
+
+
+
+
