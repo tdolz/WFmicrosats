@@ -6,6 +6,7 @@
 library('plyr')
 library("dplyr")
 library('readr')
+library('ggplot2')
 
 #keeping everything in this folder
 setwd("/Users//tdolan/Documents//R-Github//WFmicrosats")
@@ -91,5 +92,16 @@ mtadults <-dplyr::select(mtadults, -Fin.Clip, -stage, -put.age, -year.class)
 mtinfo <-full_join(mtage2, mtadults, by=c("Ind","Year","FishID","location","TL","catch.date"))
 
 
+### plot NE comparison
+NEests <-read.csv(file="compareNE.csv", header=TRUE)
+
+NEests %>%
+  ggplot(aes(x=bay,y=est, group=run, color=run))+
+  scale_color_viridis(discrete=TRUE)+
+  geom_pointrange(aes(ymin=low,ymax=high))+
+  xlab("")+ylab("estimated Nb")+
+  #ylim(0,500)+
+  theme(axis.text = element_text(size = 12),axis.title = element_text(size = 12),
+        axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
 
 
