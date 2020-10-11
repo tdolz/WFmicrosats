@@ -54,63 +54,149 @@ hs <-left_join(hs,wf.df,by=c("ind2")) %>% dplyr::rename(Bay2=Bay,Con2=Con,Year2=
 hs <-dplyr::rename(hs,ind1=ind1.x, clust2=clust2.y, clust1=clust1.x) %>% dplyr::select(-ind1.y,-Ind.y, -Ind.x, -clust2.x, -clust1.y)
 hs <-dplyr::select(hs, -Pop.x, -Ocean.x, -Pop.y, -Ocean.y)
 
-
 #split by bay
 bay17 <- hs %>% base::split(.$Bay1)
+clust17 <-unite(clust17, ConYear, Con, Year, remove=FALSE) %>%mutate(clust=as.factor(clust))
+parentcols <-c("1"="#d9d9d9","2"="#969696","3"="#525252","4"="#000000")
+
+#MATTITUCK
 Mt17 <-bay17$Mt
-
-#try some kind of heatmap
-ggplot(Mt17, aes(ind1, ind2))+ #switch between AS and percentsib
-  geom_tile(aes(fill=prob), show.legend = TRUE)+ #fill is continuos probability
-  scale_fill_gradient(low ="#ffeda0" , high = "#800026")+ #warm colors
-  #geom_text(color="white", size=5)+
-  coord_fixed(ratio = 1) +
-  #facet_grid(ConYear1~ConYear2)+
-  #facet_grid(clust1~clust2)+
-  xlab("")+ylab("")+
-  theme(axis.text = element_text(size = 12),axis.title = element_text(size =12),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-
-#average tile
-sum_prob <-ddply(Mt17, ConYear1~ConYear2, summarize, avr = mean(prob))
-sum_prob <-mutate(sum_prob, cy1 = pmin(ConYear1,ConYear2), cy2 =pmax(ConYear1,ConYear2)) %>% arrange(cy1)
-ggplot(sum_prob, aes(cy1, cy2))+ 
-  geom_tile(aes(fill=avr), show.legend = TRUE)+
-  scale_fill_gradient(low ="#ffeda0" , high = "#800026")+ #warm colors
-  #geom_text(color="white", size=5)+
-  coord_fixed(ratio = 1) +
-  xlab("")+ylab("")+
-  theme(axis.text = element_text(size = 12),axis.title = element_text(size =12),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-
 Mt17 <-mutate(Mt17, clust1=as.factor(clust1), clust2=as.factor(clust2))
+Mt17$ConYear1 <-revalue(Mt17$ConYear1,c("1_2015"="2015 early","2_2015"="2015 late","1_2016"="2016 early","2_2016"="2016 late") )
+Mt17$ConYear2 <-revalue(Mt17$ConYear2,c("1_2015"="2015 early","2_2015"="2015 late","1_2016"="2016 early","2_2016"="2016 late") )
+
+Mtclust <-filter(clust17, Bay=="Mt")
+Mtclust$ConYear <-revalue(Mtclust$ConYear,c("1_2015"="2015 early","2_2015"="2015 late","1_2016"="2016 early","2_2016"="2016 late") )
+
 
 #scatter ind1 vs. ind2 - This one is good. 
 ggplot(Mt17, aes(ind1, ind2))+
   geom_point(aes(color=clust1, size=prob))+ #options: shape = ConYear1 within aes, size=3 outside of aes
+  #scale_color_brewer(palette ="Paired")+
   facet_grid(ConYear1~ConYear2, scales="free", drop=FALSE)+ #margins =TRUE is interesting. 
-  xlab("")+ylab("")+
-  theme(axis.text = element_text(size = 5),axis.title = element_text(size =5),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
+  xlab("offspring 1")+ylab("offspring 2")+
+  theme(axis.text = element_text(size = 5),axis.title = element_text(size =10),axis.text.x = element_text(angle = 90),
+        panel.background = element_rect(fill = "white", colour = "black"),strip.text = element_text(colour = 'black', face="bold"))
+ggsave('Mtbubbles.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 8, height = 8)
 
-#scatter ind1 vs. ind1
-ggplot(Mt17, aes(ind1, ind1))+
-  geom_point(aes(color=clust1), size=3)+ #you can add shape = ConYear1 within aes
-  facet_wrap(~ConYear1, scales="free", drop=FALSE)+ #margins =TRUE is interesting. 
-  xlab("")+ylab("")+
-  theme(axis.text = element_text(size = 5),axis.title = element_text(size =5),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-#this tells you that families are spread across clusters for the most part. 
 
 #barplot count of family within conyear. 
 #clust 1 conyear 1  --- This one is good. 
-ggplot(Mt17, aes(clust1))+
-geom_histogram(stat="count")+
-  facet_grid(~ConYear1)
-#switch
-ggplot(Mt17, aes(clust2))+
+#barplot count of family within conyear. 
+Mtbbs <- ddply(Mtclust,~clust, summarize, countgroups= n_distinct(ConYear))
+Mtbb17 <-left_join(Mtclust, Mtbbs, by="clust") %>%mutate(countgroups=as.factor(countgroups), ConYear=as.factor(ConYear))
+
+Mtbb17 %>%
+  ggplot(aes(clust, fill=countgroups))+# fill by number of appearances across groups
+  scale_fill_manual(values=parentcols, guide=FALSE)+ #turn this off if you're doing family colors
   geom_histogram(stat="count")+
-  facet_grid(~ConYear2)
+  facet_wrap(~ConYear, nrow=4)+
+  xlab("family")+ylab("number of offspring")+
+  theme(strip.background =element_rect(fill="white"),strip.text = element_text(colour = 'black', face="bold"),
+        axis.text.y = element_text(size = 10),axis.text.x=element_text(size = 5),axis.title = element_text(size =10),
+        panel.background = element_rect(fill = "white", colour = "black"))
+ggsave('Mtfam17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 4, height = 8)
 
-#try this
-exMt <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/experimentalMTmatrix.csv", header = FALSE) #csv version 
-exMT <-data.matrix(exMt)
-exMT[is.na(exMT)] <-0
+#fathers
+Mtdads <- ddply(Mtclust, ~father, summarize, countgroups= n_distinct(ConYear))
+Mtdad17 <-Mtclust %>% left_join(Mtdads, by="father") %>%mutate(countgroups=as.factor(countgroups))
+Mtdad17 %>%
+ggplot(aes(father, fill=countgroups))+
+  geom_histogram(stat="count")+
+  scale_y_discrete(limits=c("1","2","3"))+
+  scale_fill_manual(values=parentcols,guide=FALSE)+
+  facet_wrap(~ConYear, nrow=4)+
+  xlab("father")+ylab("number of offspring")+
+  theme(strip.background =element_rect(fill="white"),strip.text = element_text(colour = 'black', face="bold"),
+        axis.text.y = element_text(size = 10),axis.text.x=element_text(size = 5),axis.title = element_text(size =10),
+        panel.background = element_rect(fill = "white", colour = "black"))
+ggsave('Mtdads17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 4, height = 8)
 
-heatmap(exMT, Rowv=Mt17$ind1)
+
+#mothers
+Mtmoms <-Mtclust %>%  ddply(~mother, summarize, countgroups= n_distinct(ConYear))
+Mtmom17 <-Mtclust %>% left_join(Mtmoms, by="mother") %>%mutate(countgroups=as.factor(countgroups))
+Mtmom17 %>%
+  ggplot(aes(mother, fill=countgroups))+
+  geom_histogram(stat="count")+
+  scale_y_discrete(limits=c("1","2", "3"))+
+  scale_fill_manual(values=parentcols,guide=FALSE)+
+  facet_wrap(~ConYear, nrow=4)+
+  xlab("mother")+ylab("number of offspring")+
+  theme(strip.background =element_rect(fill="white"),strip.text = element_text(colour = 'black', face="bold"),
+        axis.text.y = element_text(size = 10),axis.text.x=element_text(size = 5),axis.title = element_text(size =10),
+        panel.background = element_rect(fill = "white", colour = "black"))
+ggsave('Mtmoms17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 4, height = 8)
+
+
+#SHINNECOCK BAY
+Shin17 <-bay17$Shin
+Shin17 <-mutate(Shin17, clust1=as.factor(clust1), clust2=as.factor(clust2))
+Shin17$ConYear1 <-revalue(Shin17$ConYear1,c("1_2016"="2016 early","2_2016"="2016 late","1_2017"="2017 early","2_2017"="2017 late") )
+Shin17$ConYear2 <-revalue(Shin17$ConYear2,c("1_2016"="2016 early","2_2016"="2016 late","1_2017"="2017 early","2_2017"="2017 late") )
+
+Shiclust <-filter(clust17, Bay=="Shin")
+Shiclust$ConYear <-revalue(Shiclust$ConYear,c("1_2016"="2016 early","2_2016"="2016 late","1_2017"="2017 early","2_2017"="2017 late") )
+
+
+#scatter ind1 vs. ind2 - This one is good. 
+ggplot(Shin17, aes(ind1, ind2))+
+  geom_point(aes(color=clust1, size=prob))+ #options: shape = ConYear1 within aes, size=3 outside of aes
+  #scale_color_brewer(palette ="Paired")+
+  facet_grid(ConYear1~ConYear2, scales="free", drop=FALSE)+ #margins =TRUE is interesting. 
+  xlab("offspring 1")+ylab("offspring 2")+
+  theme(axis.text = element_text(size = 5),axis.title = element_text(size =10),axis.text.x = element_text(angle = 90),
+        panel.background = element_rect(fill = "white", colour = "black"),strip.text = element_text(colour = 'black', face="bold"))
+ggsave('Shibubbles.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 8, height = 8)
+
+#barplot count of family within conyear. 
+Shibbs <-Shiclust %>% ddply(~clust, summarize, countgroups= n_distinct(ConYear))
+Shibb17 <-Shiclust %>% left_join(Shibbs, by="clust") %>%mutate(countgroups=as.factor(countgroups))
+Shibb17 %>%
+  ggplot(aes(clust,fill=countgroups))+# fill by number of appearances across groups
+  scale_fill_manual(values=parentcols,guide=FALSE)+ #turn this off if you're doing family colors
+  geom_histogram(stat="count")+
+  facet_wrap(~ConYear, nrow=4)+
+  xlab("family")+ylab("number of offspring")+
+  theme(strip.background =element_rect(fill="white"),strip.text = element_text(colour = 'black', face="bold"),
+        axis.text.y = element_text(size = 10),axis.text.x=element_text(size = 5),axis.title = element_text(size =10),panel.background = element_rect(fill = "white", colour = "black"))
+ggsave('Shifam17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 4, height = 8)
+
+#fathers
+Shidads <-Shiclust %>%ddply(~father, summarize, countgroups= n_distinct(ConYear))
+Shidad17 <-Shiclust %>% left_join(Shidads, by="father") %>%mutate(countgroups=as.factor(countgroups))
+Shidad17 %>%
+  ggplot(aes(father, fill=countgroups))+
+  geom_histogram(stat="count")+
+  scale_y_discrete(limits=c("1","2","3"))+
+  scale_fill_manual(values=parentcols,guide=FALSE)+
+  facet_wrap(~ConYear, nrow=4)+
+  xlab("father")+ylab("number of offspring")+
+  theme(strip.background =element_rect(fill="white"),strip.text = element_text(colour = 'black', face="bold"),
+        axis.text.y = element_text(size = 10),axis.text.x=element_text(size = 5),axis.title = element_text(size =10),
+        panel.background = element_rect(fill = "white", colour = "black"))
+ggsave('Shidads17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 4, height = 8)
+
+#mothers
+Shimoms <-Shiclust %>% ddply(~mother, summarize, countgroups= n_distinct(ConYear))
+Shimom17 <-Shiclust %>% left_join(Shimoms, by="mother") %>%mutate(countgroups=as.factor(countgroups))
+Shimom17 %>%
+  ggplot(aes(mother, fill=countgroups))+
+  geom_histogram(stat="count")+
+  scale_y_discrete(limits=c("1","2","3"))+
+  scale_fill_manual(values=parentcols, guide=FALSE)+
+  facet_wrap(~ConYear, nrow=4)+
+  xlab("mother")+ylab("number of offspring")+
+  theme(strip.background =element_rect(fill="white"),strip.text = element_text(colour = 'black', face="bold"),
+        axis.text.y = element_text(size = 10),axis.text.x=element_text(size = 5),axis.title = element_text(size =10),
+        panel.background = element_rect(fill = "white", colour = "black"))
+ggsave('Shimoms17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 4, height = 8)
+
+
+
+
+
+
+
+
+
