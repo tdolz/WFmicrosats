@@ -57,7 +57,7 @@ wfia.pair <- seppop(wfpop2CLEAN) %>% lapply(pair.ia) #by bay!
 #go back to wfpop for this. 
 wfpopLD <-genclone2genind(wfpop)
 all_loci <- locNames(wfpopLD)# create vector of all loci
-removeloc <- c("WF06")# create vector containing loci to remove
+removeloc <- c("WF06","WF27")# create vector containing loci to remove
 keeploc <- setdiff(all_loci, removeloc)# create list of loci to keep
 wfpopLD <- wfpopLD[loc = keeploc]# filter loci in genind object
 length(locNames(wfpopLD))# check number of loci in genind obj
@@ -232,6 +232,34 @@ loc_stats <- left_join(loc_stats, loc_stats_2) %>%
 
 loc_stats[is.na(loc_stats)] <- NA
 #write.csv(loc_stats,file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/loc_stats17.csv")
+pivlocstats <-pivot_longer(loc_stats,cols = c("N_ALLELES", "SIMPSON_IDX", "EVENNESS","Ho","Hs","Ht","Fis","SHANNON_IDX","STODD_TAYLOR_IDX"),
+                             names_to="variable", values_to="value")
+sumlocstats <-ddply(pivlocstats, GRP~variable, summarize, meanvar=mean(value), sdvar=sd(value))
+#write.csv(sumlocstats,file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/sumlocstats17.csv")
+
+
+allcolors <-c("grey","#d0d1e6","#a6bddb","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#1c9099","#016450","#016450","#016450","#016450","#016450")
+
+
+#Giant barplot
+pivlocstats %>%
+  mutate(GRP=as.factor(GRP)) %>%
+  filter(variable %in% c("N_ALLELES", "SIMPSON_IDX", "EVENNESS","Ho","Hs","Ht","Fis")) %>%
+  filter(GRP %in% c("Atl","Nap","Mor","Jam","Shin","Shin_1_2016","Shin_2_2016","Shin_1_2017","Shin_2_2017","Mt","Mt_3","Mt_4","Mt_1_2015","Mt_2_2015","Mt_1_2016","Mt_2_2016"))%>%
+  ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
+  geom_boxplot(aes(fill=GRP))+ 
+  scale_fill_manual(name = "GRP",values = allcolors)+
+  coord_flip()+ 
+  facet_wrap(~variable, scales="free_x", nrow=2)+ 
+  theme(axis.text = element_text(size = 10),axis.title = element_text(size = 12),panel.background = element_rect(fill = 'white', colour = 'black'),
+        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
+#ggsave('pivlocstats17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 12, height = 5)
+
+
+
+
+
+
 
 #create different loc stats groups for testing. 
 loc_stats_bay <-filter(loc_stats, GRP %in% c("Nap","Mor","Jam","Shin","Mt"))
@@ -362,16 +390,15 @@ ar <- as.data.frame(ar$Ar) %>%
 setPop(wfpopLD) <- ~Bay
 dat <- hierfstat:::.genind2hierfstat(wfpopLD, pop = wfpopLD@pop)
 df <- allelic.richness(dat,diploid = TRUE)
-#df <-allelic.richness(wfpopLD, diploid=TRUE)
+
+
 
 # I am not sure how to tell which one is which in order to label the columns, but I assume they're in the same order as WFPOPLD?
 df <- as.data.frame(df$Ar) %>%
   rownames_to_column("LOCUS") %>%
-  dplyr::rename(Nap = V1,
-                Mor = V2,
-                Jam = V3,
-                Shin = V4,
-                Mt = V5)
+  dplyr::rename(Nap = V1,Mor = V2,Jam = V3,Shin = V4,Mt = V5)
+  dplyr::rename(Nap=V1, Mor=V2, Jam=V3, Shin_1_2016=V4, Shin_2_2016=V5, Mt_2_2015=V6,   Mt_1_2015=V7,
+                Mt_2_2016 =V8,  Mt_1_2016=V9, Mt_3_2015=V10,Mt_4_2015=V11, Mt_5_2015=   "Mt_3_2016"   "Mt_4_2016"   "Mt_5_2016"   "Shin_1_2017" "Shin_2_2017")
 
 ar <- left_join(ar, df)
 
@@ -384,6 +411,7 @@ library("cowplot")
 #for rarified alleles, you have to make a new Allelic Richness analysis for each group you are comparing. 
 meltar2 <- pivot_longer(ar, cols=c("Mt","Shin","Nap","Mor","Jam","ALL"),names_to="variable", values_to="value")
 meltar3 <-filter(meltar2, variable != "ALL") #it doenst like it when you exclude the "all" category... 
+meltar_all <-filter(meltar2, variable == "ALL")
 
 meltar3 %>%
   #filter(variable !="ALL")%>%
@@ -397,6 +425,12 @@ meltar3 %>%
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
 ggsave('rareifiedallelesLD_bay17.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
+
+### by byc ######
+
+
+
+
 
 ##Private alleles
 df <-genind2df(wfpopLD, usepop = TRUE, oneColPerAll = TRUE) 
@@ -425,8 +459,22 @@ meltpA %>%
 ggsave('privateallelesLD_bay17.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
 
 
+#rareified allelic richness by bay. 
+meltar_all #all
+meltar3 #by bay.
 
-# TEST FOR SIGNIFICANT DIFFERENCES
+#private alleles 
+meltpA #by bay
+
+#loci in HWE by bay. 
+
+
+
+
+
+
+
+######## TEST FOR SIGNIFICANT DIFFERENCES#####
 # need to use Friedman's test for global test and Wilcoxon signed rank for pairwise tests 
 # to test symmetry of numeric repeated measurements (stastic per locus) in block design
 # Example using gene diversity (expected heterozygosity by estuary)
@@ -445,7 +493,7 @@ ggsave('privateallelesLD_bay17.png',path="/Users/tdolan/Documents/WIP research/m
 fdata <- loc_stats_bay
 
 
-###Friedman's test for Global heterogeneity
+#####Friedman's test for Global heterogeneity#####
 friedman.test(Hs~GRP | LOCUS, data= fdata) #Hs - fixing this. 
 friedman.test(EVENNESS~GRP | LOCUS, data= fdata) #evenness
 friedman.test(Ht~GRP | LOCUS, data= fdata) #Ht
@@ -739,6 +787,33 @@ rel2 %>%
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
 #ggsave('rel_bay17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
+
+
+
+##### FINAL GIANT BARPLOT ########
+
+allcolors <-c("grey","#d0d1e6","#a6bddb","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#1c9099","#016450","#016450","#016450","#016450","#016450")
+#Giant barplot
+pivlocstats %>%
+  mutate(GRP=as.factor(GRP)) %>%
+  filter(variable %in% c("N_ALLELES", "SIMPSON_IDX", "EVENNESS","Ho","Hs","Ht","Fis")) %>%
+  filter(GRP %in% c("Atl","Nap","Mor","Jam","Shin","Shin_1_2016","Shin_2_2016","Shin_1_2017","Shin_2_2017","Mt","Mt_3","Mt_4","Mt_1_2015","Mt_2_2015","Mt_1_2016","Mt_2_2016"))%>%
+  ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
+  geom_boxplot(aes(fill=GRP))+ 
+  scale_fill_manual(name = "GRP",values = allcolors)+
+  coord_flip()+ 
+  facet_wrap(~variable, scales="free_x", nrow=2)+ 
+  theme(axis.text = element_text(size = 10),axis.title = element_text(size = 12),panel.background = element_rect(fill = 'white', colour = 'black'),
+        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
+#ggsave('pivlocstats17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 12, height = 5)
+
+
+
+
+
+
+
+
 
 # lets try testing for significant differences in mean IR for each bay pair with a wilcox sign test, idk why that's not ok... 
 comp <- as.character(unique(rel2$name))  

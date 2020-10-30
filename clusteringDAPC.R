@@ -63,10 +63,10 @@ lindsaycolors <-c("#ff5d8f","#ff90b3","#ce4257","#8a2846","#84bcda","#ffd166")
 admixcols <-c("#8ecae6","#219ebc","#023047","#ffb703","#fb8500")
 sunnycolors <-c("#ec4847","#e6df44","#6600ff", "#061283", "#5bd0c8","black")
 boldcols <-c("firebrick","orange","black","blue","#016450")
-
 library("wesanderson")
 royal <-wes_palette(5,name="Darjeeling1",type="continuous")
 fox <-wes_palette(5,name="FantasticFox1",type="continuous")
+
 #### Clustering ####
 ####DAPC USE THIS ONE####
   #http://adegenet.r-forge.r-project.org/files/tutorial-dapc.pdf
@@ -85,15 +85,6 @@ fox <-wes_palette(5,name="FantasticFox1",type="continuous")
 
 #standard error of the mean
 sem <- function(x) sd(x)/sqrt(length(x))
-
-
-
-
-
-
-
-
-
 
 #####BAY#####
 setPop(wfpopLD) <-~Bay
@@ -126,7 +117,7 @@ scatter(yoy_dapc, posi.da="bottomright",scree.pca=TRUE,posi.pca="bottomleft", po
 setPop(shinco) <-~Bay/Con/Year
 shin_dapc <- dapc(shinco) #60, 3
 as <- optim.a.score(shin_dapc)#how many clusters
-shin_dapc <- dapc(shinco, n.pca = 55) #2
+shin_dapc <- dapc(shinco, n.pca = 46) #2
 #ggsave("shinclust_optim.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs");dev.off()
 scatter(shin_dapc, bg="white", pch=20, cstar=0,posi.leg = "topright", scree.pca=TRUE,scree.da=FALSE, posi.pca="bottomright",col=shincolors2, clab=0, #turns labels on and off
         legend=TRUE, txt.leg = paste(c("YOY early 2016","YOY early 2017","YOY late 2016","YOY late 2017")))
@@ -172,28 +163,45 @@ boo <-filter(grp_membership, GRP==pop) %>%n_distinct()
 toto <-n_distinct(grp_membership$Ind)
 boo/toto
 boo<-filter(grp_membership, GRP==pop)
-mean(boo$MEMBSHIP)
-sem(boo$MEMBSHIP)
+mean(boo$MEMBSHIP) #the percent out of total that are assigned to the correct group
+sem(boo$MEMBSHIP) #standard error of the mean percentage
 
-
-
-#xval
-X <- scaleGen(mtco, NA.method = "mean")
+#xval the assignment. 
+X <- scaleGen(shinco, NA.method = "mean")
 xval <- xvalDapc(X, GRP$pop, 
                  n.pca.max = 300, training.set = 0.9,
                  result = "groupMean", center = TRUE, scale = FALSE,
                  n.pca = NULL, n.rep = 30, xval.plot = TRUE)
-retain <- as.numeric(xval$`Number of PCs Achieving Highest Mean Success`); retain #40
+retain <- as.numeric(xval$`Number of PCs Achieving Highest Mean Success`); retain 
+# wow now it's 20 
+
+#redo Shinnecock with fewer PC based on the xval? 
+shin_dapc <- dapc(shinco, n.pca = 20) #2
+scatter(shin_dapc, bg="white", pch=20, cstar=0,posi.leg = "topright", scree.pca=TRUE,scree.da=FALSE, posi.pca="bottomright",col=shincolors2, clab=0, #turns labels on and off
+        legend=TRUE, txt.leg = paste(c("YOY early 2016","YOY early 2017","YOY late 2016","YOY late 2017")))
+# They are all on top of each other now... 
+## Compare geographic regions of origin and assigned group memberships
+grp_membership <- as.data.frame(shin_dapc$posterior) %>% tibble::rownames_to_column("Ind") %>%
+  gather(key = GRP, value = MEMBSHIP, 2:5) %>% arrange(MEMBSHIP)%>%
+  left_join(GRP)
+#NEW compopolot - fewer PC - It looks worse.... 
+memprob <-ggplot(grp_membership, aes(x = Ind, y = MEMBSHIP, fill = GRP)) +
+  geom_bar(stat = "identity") +
+  labs(x = "INDV", y = "memb. prob") +
+  facet_grid(. ~ pop, scales = "free", space = "free") +
+  scale_fill_manual(values = shincolors2) +theme_cowplot() ;memprob
+#to see how many were assigned to their population of origin, compare how many individuals have a GRP that matches POP
+boo <-filter(grp_membership, GRP==pop) %>%n_distinct()
+toto <-n_distinct(grp_membership$Ind)
+boo/toto
+boo<-filter(grp_membership, GRP==pop)
+mean(boo$MEMBSHIP) #the percent out of total that are assigned to the correct group
+sem(boo$MEMBSHIP) #standard error of the mean percentage
+# now we have 44% assignment. 
+#### using xval to choose how many PC to retain resulted in worse assignment. 
 
 
-
-
-
-
-
-
-
-
+###### MATTITUCK CREEK ###########
 #Mt cohorts - bay con year
 setPop(mtco) <-~Bay/Con
 mt_dapc <- dapc(mtco) 
@@ -242,7 +250,7 @@ boo <-filter(grp_membership, GRP==pop) %>%n_distinct()
 toto <-n_distinct(grp_membership$Ind)
 boo/toto
 boo<-filter(grp_membership, GRP==pop)
-mean(boo$MEMBSHIP)
+mean(boo$MEMBSHIP) #61%
 sem(boo$MEMBSHIP)
 plyr::ddply(boo,~pop,count)
 plyr::ddply(grp_membership,~pop, summarize, membership=mean(MEMBSHIP))
@@ -254,7 +262,9 @@ xval <- xvalDapc(X, GRP$pop,
                  n.pca.max = 300, training.set = 0.9,
                  result = "groupMean", center = TRUE, scale = FALSE,
                  n.pca = NULL, n.rep = 30, xval.plot = TRUE)
-retain <- as.numeric(xval$`Number of PCs Achieving Highest Mean Success`); retain #40
+retain <- as.numeric(xval$`Number of PCs Achieving Highest Mean Success`); retain #50
+### In this case the xval actually reccommended more PC than we previously used. 
+
 
 #naive clustering
 #I can't get naive clustering to work for MT. 
@@ -270,7 +280,7 @@ source("PCA_DAPCfunctions.R")
 #####Edit shannon's gist because some of the code is deprecated ####
 plot.Kstat <- function(grp, k_clust){
   Kstat <- as.data.frame(grp$Kstat) %>%
-    rownames_to_column("K") %>%
+    tibble::rownames_to_column("K") %>%
     separate(K, c("temp", "K"), sep = "=") %>%
     rename(BIC = `grp$Kstat`) %>%
     select(K, BIC)
@@ -398,9 +408,7 @@ PC.ind <- function(PCA){
 
 
 
-
-
-
+######### NOW SHANNON"S WAY ###########
 
 # genind object of genotypes
 # assume strata loaded to group individuals (LIB_ID or SAMPLE_ID) - in this example hierarchical grouping of 
@@ -435,7 +443,7 @@ grp_BIC <- find.clusters.genind(gen,
                                 choose.n.clust = TRUE,
                                 max.n.clust = 40)
 
-# plot BIC per K; chosen value for K highlighted in red
+# plot BIC per K; chosen value for K highlighted in red - try 100, and 3
 plot.Kstat(grp_BIC, 3)
 
 # determine optimum number of PCs to retain ====
@@ -449,22 +457,29 @@ xval <- xvalDapc(X, grp_BIC$grp,
                  result = "groupMean", center = TRUE, scale = FALSE,
                  n.pca = NULL, n.rep = 30, xval.plot = TRUE)
 xval$`Mean Successful Assignment by Number of PCs of PCA`
-# identify optimum number of PCs to retain  --> 100
+# identify optimum number of PCs to retain  --> 150
 retain <- as.numeric(xval$`Number of PCs Achieving Highest Mean Success`)
 
 # perform DAPC ====
 # perform DAPC using k-mean clusters as groups
-dapck <-dapc(gen, grp_BIC$grp, n.pca = retain) #not going to specifiy the number of da
+dapck <-dapc(gen, grp_BIC$grp, n.pca = retain) #not going to specifiy the number of da, retain 2.
 
 scatter(dapck, posi.da="bottomright", bg="white", pch=17:22, cstar=0, scree.pca=TRUE, posi.pca="bottomleft")
+#clustering plot looks great. 
 
 #the second thing we want to know is how cluster assignments relate to original group assignments
-kgrp <- as.data.frame(dapck$grp) %>% rownames_to_column(var="Ind") #we will use this later. 
+kgrp <- as.data.frame(dapck$grp) %>% tibble::rownames_to_column(var="Ind") #we will use this later. 
 # use group by region ====
 GRP <- strata.schemes %>% dplyr::select(Ind, pop)
 
 kgrp <-left_join(kgrp,GRP, by="Ind")
-#how to show cluster distribution across populations?? 
+# show cluster distribution across populations
+kgrps <-ddply(kgrp, pop~dapck$grp, summarize, group=n_distinct(Ind))
+kgrps %>%
+  ggplot(aes(x=pop, y=group, fill=`dapck$grp`)) +
+  geom_bar(stat="identity",alpha=1, position=position_dodge())+
+  theme(axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "white"))
+#so they're like evenly mixed across groups. 
 
 #ggsave("mortalitybarplot_drab.png", path="/Users/tdolan/Documents/Proposal/Figures")
 #dev.off()
