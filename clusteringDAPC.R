@@ -59,6 +59,8 @@ shincolors <-c("#143601","#68b0ab","#538d22","#aad576")
 shincolors2 <-c("#29bf12","#abff4f","#3f8efc","#3b28cc")
 Mtcolors <-c("#f4d35e","#ee964b","#f95738","#ee4266","#15616d","#0d3b66")
 Mtcolors2 <-c("#f72585","#7209b7","#4361ee","#4cc9f0")
+Mtcolors3 <-c("#f72585","#7209b7","#4361ee","#4cc9f0","#ff930a","#9ef01a")
+Mtcolors4 <-c("#fad2e1","#d8bbff","#ff006e","#8338ec","#4361ee","#4cc9f0")
 lindsaycolors <-c("#ff5d8f","#ff90b3","#ce4257","#8a2846","#84bcda","#ffd166")
 admixcols <-c("#8ecae6","#219ebc","#023047","#ffb703","#fb8500")
 sunnycolors <-c("#ec4847","#e6df44","#6600ff", "#061283", "#5bd0c8","black")
@@ -115,18 +117,7 @@ scatter(yoy_dapc, posi.da="bottomright",scree.pca=TRUE,posi.pca="bottomleft", po
 
 #######Shin cohorts#######
 setPop(shinco) <-~Bay/Con/Year
-shin_dapc <- dapc(shinco) #60, 3
-as <- optim.a.score(shin_dapc)#how many clusters
-shin_dapc <- dapc(shinco, n.pca = 46) #2
-#ggsave("shinclust_optim.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs");dev.off()
-scatter(shin_dapc, bg="white", pch=20, cstar=0,posi.leg = "topright", scree.pca=TRUE,scree.da=FALSE, posi.pca="bottomright",col=shincolors2, clab=0, #turns labels on and off
-        legend=TRUE, txt.leg = paste(c("YOY early 2016","YOY early 2017","YOY late 2016","YOY late 2017")))
-#ggsave("shincoClust_55pC_2dc.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs");dev.off()
-scatter(shin_dapc,1,1, bg="white", scree.da=FALSE, legend=TRUE, solid=.4,col=shincolors2)
-#ggsave("shinclust_150pC_1.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs");dev.off()
 
-#you also need to do xval for this and naiive clustering. 
-# dataframe with sample information (population designations, hierarchical strata, sex, ...)
 # must have column with sample IDs in common to be able to perform joins
 setPop(shinco)  <- ~Bay/Con/Year   
 df <- genind2df(shinco, usepop=TRUE, oneColPerAll = TRUE)
@@ -138,6 +129,49 @@ wf.strata <-dplyr::select(df, Ind, pop)
 strata.schemes <-wf.strata[,c("Ind","pop")] 
 row.names(strata.schemes) <-wf.strata$Ind
 GRP <- strata.schemes %>% dplyr::select(Ind, pop)
+
+set.seed(1213)
+#xval the assignment. 
+X <- scaleGen(shinco, NA.method = "mean")
+xval <- xvalDapc(X, GRP$pop, 
+                 n.pca.max = 300, training.set = 0.9,
+                 result = "groupMean", center = TRUE, scale = FALSE,
+                 n.pca = NULL, n.rep = 50, xval.plot = TRUE)
+retain <- as.numeric(xval$`Number of PCs Achieving Highest Mean Success`); retain 
+
+sdpc <-filter(xval$`Cross-Validation Results`, n.pca==40)
+mean(sdpc$success)
+sem(sdpc$success)
+sd(sdpc$success)
+
+#redo Shinnecock with fewer PC based on the xval? 
+shin_dapc <- dapc(shinco, n.pca = 40) #2
+scatter(shin_dapc, bg="white", pch=20, cstar=0,posi.leg = "topleft",scree.pca=TRUE,scree.da=TRUE,posi.da="bottomleft", posi.pca="bottomright",col=shincolors2, clab=0, #turns labels on and off
+        legend=TRUE, txt.leg = paste(c("YOY early 2016","YOY early 2017","YOY late 2016","YOY late 2017")))
+# They are all on top of each other now... 
+## Compare geographic regions of origin and assigned group memberships
+grp_membership <- as.data.frame(shin_dapc$posterior) %>% tibble::rownames_to_column("Ind") %>%
+  gather(key = GRP, value = MEMBSHIP, 2:5) %>% arrange(MEMBSHIP)%>%
+  left_join(GRP)
+#NEW compopolot - fewer PC - It looks worse.... 
+memprob <-ggplot(grp_membership, aes(x = Ind, y = MEMBSHIP, fill = GRP)) +
+  geom_bar(stat = "identity") +
+  labs(x = "INDV", y = "memb. prob") +
+  facet_grid(. ~ pop, scales = "free", space = "free") +
+  scale_fill_manual(values = shincolors2) +theme_cowplot() ;memprob
+#to see how many were assigned to their population of origin, compare how many individuals have a GRP that matches POP
+boo <-filter(grp_membership, GRP==pop) %>%n_distinct()
+toto <-n_distinct(grp_membership$Ind)
+boo/toto
+boo<-filter(grp_membership, GRP==pop)
+mean(boo$MEMBSHIP) #the percent out of total that are assigned to the correct group
+sem(boo$MEMBSHIP) #standard error of the mean percentage
+# now we have 44% assignment. 
+#### using xval to choose how many PC to retain resulted in worse assignment. 
+
+
+#you also need to do xval for this and naiive clustering. 
+# dataframe with sample information (population designations, hierarchical strata, sex, ...)
 
 #assignment validation
 ## Compare geographic regions of origin and assigned group memberships
@@ -166,57 +200,63 @@ boo<-filter(grp_membership, GRP==pop)
 mean(boo$MEMBSHIP) #the percent out of total that are assigned to the correct group
 sem(boo$MEMBSHIP) #standard error of the mean percentage
 
-#xval the assignment. 
-X <- scaleGen(shinco, NA.method = "mean")
-xval <- xvalDapc(X, GRP$pop, 
+############k means clustering for shinnecock? 
+gen <- shinco # mtco, wfyoy16
+setPop(gen) <- ~Bay/Con/Year
+set.seed(1713)
+grp_BIC <- find.clusters.genind(gen, stat = "BIC",choose.n.clust = TRUE,max.n.clust = 40)
+
+# plot BIC per K; chosen value for K highlighted in red - try 100, and 3
+plot.Kstat(grp_BIC, 4)
+
+bays_kstat <-grp_BIC$Kstat
+
+# determine optimum number of PCs to retain ====
+# scale allele frq/missing data replaced with mean
+X <- scaleGen(gen, NA.method = "mean")
+
+# perform stratified cross validation
+# 90% of individuals used as training individuals, remaining 10% are assigned
+xval <- xvalDapc(X, grp_BIC$grp, 
                  n.pca.max = 300, training.set = 0.9,
                  result = "groupMean", center = TRUE, scale = FALSE,
                  n.pca = NULL, n.rep = 30, xval.plot = TRUE)
-retain <- as.numeric(xval$`Number of PCs Achieving Highest Mean Success`); retain 
-# wow now it's 20 
+xval$`Mean Successful Assignment by Number of PCs of PCA`
+# identify optimum number of PCs to retain  --> 150
+retain <- as.numeric(xval$`Number of PCs Achieving Highest Mean Success`)
 
-#redo Shinnecock with fewer PC based on the xval? 
-shin_dapc <- dapc(shinco, n.pca = 20) #2
-scatter(shin_dapc, bg="white", pch=20, cstar=0,posi.leg = "topright", scree.pca=TRUE,scree.da=FALSE, posi.pca="bottomright",col=shincolors2, clab=0, #turns labels on and off
-        legend=TRUE, txt.leg = paste(c("YOY early 2016","YOY early 2017","YOY late 2016","YOY late 2017")))
-# They are all on top of each other now... 
-## Compare geographic regions of origin and assigned group memberships
-grp_membership <- as.data.frame(shin_dapc$posterior) %>% tibble::rownames_to_column("Ind") %>%
-  gather(key = GRP, value = MEMBSHIP, 2:5) %>% arrange(MEMBSHIP)%>%
-  left_join(GRP)
-#NEW compopolot - fewer PC - It looks worse.... 
-memprob <-ggplot(grp_membership, aes(x = Ind, y = MEMBSHIP, fill = GRP)) +
-  geom_bar(stat = "identity") +
-  labs(x = "INDV", y = "memb. prob") +
-  facet_grid(. ~ pop, scales = "free", space = "free") +
-  scale_fill_manual(values = shincolors2) +theme_cowplot() ;memprob
-#to see how many were assigned to their population of origin, compare how many individuals have a GRP that matches POP
-boo <-filter(grp_membership, GRP==pop) %>%n_distinct()
-toto <-n_distinct(grp_membership$Ind)
-boo/toto
-boo<-filter(grp_membership, GRP==pop)
-mean(boo$MEMBSHIP) #the percent out of total that are assigned to the correct group
-sem(boo$MEMBSHIP) #standard error of the mean percentage
-# now we have 44% assignment. 
-#### using xval to choose how many PC to retain resulted in worse assignment. 
+# perform DAPC ====
+# perform DAPC using k-mean clusters as groups
+dapck <-dapc(gen, grp_BIC$grp, n.pca = retain) #not going to specifiy the number of da, retain 2.
+
+scatter(dapck, posi.da="bottomright", bg="white", pch=17:22, cstar=0, scree.pca=TRUE, posi.pca="bottomleft")
+#clustering plot looks great. 
+
+#the second thing we want to know is how cluster assignments relate to original group assignments
+kgrp <- as.data.frame(dapck$grp) %>% tibble::rownames_to_column(var="Ind") #we will use this later. 
+# use group by region ====
+GRP <- strata.schemes %>% dplyr::select(Ind, pop)
+
+kgrp <-left_join(kgrp,GRP, by="Ind")
+# show cluster distribution across populations
+kmeanscols <-c("blue","grey","orange","red")
+kgrps <-ddply(kgrp, pop~dapck$grp, summarize, group=n_distinct(Ind))
+kgrps %>%
+  ggplot(aes(x=pop, y=group, fill=`dapck$grp`)) +
+  scale_fill_manual(values=kmeanscols)+ylab("number of individuals")+
+  geom_bar(stat="identity",alpha=0.7, position=position_dodge())+
+  theme(axis.text.x = element_text(angle = 90),axis.text = element_text(size = 14, face="bold"),axis.title = element_text(size = 14,face="bold"),panel.background = element_rect(fill = 'white', colour = 'black'),
+        panel.grid.major = element_line(colour = "white"),panel.spacing = unit(1, "lines"))
+#so they're like evenly mixed across groups. 
+
+
+
 
 
 ###### MATTITUCK CREEK ###########
 #Mt cohorts - bay con year
-setPop(mtco) <-~Bay/Con
-mt_dapc <- dapc(mtco) 
-as <- optim.a.score(mt_dapc)#how many clusters
-mt_dapc <- dapc(mtco, n.pca = 40) #retaining 3 da
-#ggsave("mtclust_optim.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs");dev.off()
-scatter(mt_dapc, bg="white", pch=20, cstar=0, scree.pca=TRUE,scree.da=TRUE, posi.da="topright",posi.pca="topleft",col=Mtcolors2, clab=0, #turns labels on and off
-        legend=FALSE, txt.leg = paste(c("YOY early","YOY late","Migrant Adults","Resident Adults")))
-#ggsave("mtClust_100pC_3da.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs");dev.off()
-#scatter(mt_dapc,1,1, bg="white", scree.da=FALSE, legend=TRUE, solid=.6,col=Mtcolors2,posi.pca="topleft")
-
-#you also need to do xval for this and naiive clustering. 
-# dataframe with sample information (population designations, hierarchical strata, sex, ...)
 # must have column with sample IDs in common to be able to perform joins
-setPop(mtco)  <- ~Bay/Con   
+setPop(mtco)  <- ~Bay/Con/Year   
 df <- genind2df(mtco, usepop=TRUE, oneColPerAll = TRUE)
 df$Ind <-rownames(df)
 df <-df[,c(38,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37)]
@@ -227,11 +267,36 @@ strata.schemes <-wf.strata[,c("Ind","pop")]
 row.names(strata.schemes) <-wf.strata$Ind
 GRP <- strata.schemes %>% dplyr::select(Ind, pop)
 
+set.seed(1213)
+#xval the assignment. 
+X <- scaleGen(mtco, NA.method = "mean")
+xval <- xvalDapc(X, GRP$pop, 
+                 n.pca.max = 300, training.set = 0.9,
+                 result = "groupMean", center = TRUE, scale = FALSE,
+                 n.pca = NULL, n.rep = 50, xval.plot = TRUE)
+retain <- as.numeric(xval$`Number of PCs Achieving Highest Mean Success`); retain 
+
+sdpc <-filter(xval$`Cross-Validation Results`, n.pca==40)
+mean(sdpc$success)
+sem(sdpc$success)
+sd(sdpc$success)
+
+#now DAPC
+mt_dapc <- dapc(mtco) 
+mt_dapc <- dapc(mtco, n.pca = 40) #retaining 3 da
+#ggsave("mtclust_optim.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs");dev.off()
+scatter(mt_dapc,bg="white", pch=20, cstar=0, scree.pca=TRUE,scree.da=TRUE, posi.da="bottomright",posi.pca="bottomleft",col=Mtcolors4, clab=0, #turns labels on and off
+        txt.leg = paste(c("YOYe 2015","YOYe 2016", "YOYl 2015","YOYl 2016","Migrant Adults","Resident Adults")),legend=TRUE)
+#ggsave("mtClust_bayconyear.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs");dev.off()
+
+
+#txt.leg = paste(c("YOYe 2015","YOYe 2016", "YOYl 2015","YOYl 2016","Migrant Adults","Resident Adults"))
+
 #assignment validation
 ## Compare geographic regions of origin and assigned group memberships
 grp_membership <- as.data.frame(mt_dapc$posterior) %>%
   tibble::rownames_to_column("Ind") %>%
-  gather(key = GRP, value = MEMBSHIP, 2:5) %>%
+  gather(key = GRP, value = MEMBSHIP, 2:7) %>%
   left_join(GRP)
 
 #make your own compoplot
@@ -239,11 +304,11 @@ memprob <-ggplot(grp_membership, aes(x = Ind, y = MEMBSHIP, fill = GRP)) +
   geom_bar(stat = "identity") +
   labs(x = "INDV", y = "memb. prob") +
   facet_grid(. ~ pop, scales = "free", space = "free") +
-  scale_fill_manual(values = Mtcolors2) +
+  scale_fill_manual(values = Mtcolors4) +
   #ylim(0.5,1)+
-  theme_cowplot() 
-  #theme(axis.text.x = element_blank());memprob
-#ggsave(memprob, file="mtcompoplot.png", width = 10, height = 5)
+  theme_cowplot();memprob
+#theme(axis.text.x = element_blank());memprob
+ggsave(memprob, file="mtcompoplot.png", width = 10, height = 5)
 
 #to see how many were assigned to their population of origin, compare how many individuals have a GRP that matches POP
 boo <-filter(grp_membership, GRP==pop) %>%n_distinct()
@@ -268,6 +333,61 @@ retain <- as.numeric(xval$`Number of PCs Achieving Highest Mean Success`); retai
 
 #naive clustering
 #I can't get naive clustering to work for MT. 
+gen <- mtco # mtco, wfyoy16
+setPop(gen) <- ~Bay/Con/Year
+set.seed(1713)
+grp_BIC <- find.clusters.genind(gen, stat = "BIC",choose.n.clust = TRUE,max.n.clust = 40) #40, 2
+
+# plot BIC per K; chosen value for K highlighted in red - try 100, and 3
+plot.Kstat(grp_BIC, 2)
+
+
+
+# determine optimum number of PCs to retain ====
+# scale allele frq/missing data replaced with mean
+X <- scaleGen(gen, NA.method = "mean")
+
+# perform stratified cross validation
+# 90% of individuals used as training individuals, remaining 10% are assigned
+xval <- xvalDapc(X, grp_BIC$grp, 
+                 n.pca.max = 300, training.set = 0.9,
+                 result = "groupMean", center = TRUE, scale = FALSE,
+                 n.pca = NULL, n.rep = 30, xval.plot = TRUE)
+xval$`Mean Successful Assignment by Number of PCs of PCA`
+# identify optimum number of PCs to retain  --> 150
+retain <- as.numeric(xval$`Number of PCs Achieving Highest Mean Success`)
+
+# perform DAPC ====
+# perform DAPC using k-mean clusters as groups
+dapck <-dapc(gen, grp_BIC$grp, n.pca = retain) #not going to specifiy the number of da, retain 2.
+
+scatter(dapck, posi.da="bottomright", bg="white", pch=17:22, cstar=0, scree.pca=TRUE, posi.pca="bottomleft")
+#clustering plot looks great. 
+
+#the second thing we want to know is how cluster assignments relate to original group assignments
+kgrp <- as.data.frame(dapck$grp) %>% tibble::rownames_to_column(var="Ind") #we will use this later. 
+# use group by region ====
+GRP <- strata.schemes %>% dplyr::select(Ind, pop)
+
+kgrp <-left_join(kgrp,GRP, by="Ind")
+# show cluster distribution across populations
+kmeanscols <-c("blue","red")
+kgrps <-ddply(kgrp, pop~dapck$grp, summarize, group=n_distinct(Ind))
+kgrps %>%
+  ggplot(aes(x=pop, y=group, fill=`dapck$grp`)) +
+  scale_fill_manual(values=kmeanscols)+ylab("number of individuals")+
+  geom_bar(stat="identity",alpha=0.7, position=position_dodge())+
+  theme(axis.text.x = element_text(angle = 90),axis.text = element_text(size = 14, face="bold"),axis.title = element_text(size = 14,face="bold"),panel.background = element_rect(fill = 'white', colour = 'black'),
+        panel.grid.major = element_line(colour = "white"),panel.spacing = unit(1, "lines"))
+#so they're like evenly mixed across groups. 
+
+
+
+
+
+
+
+
 
 
 
@@ -444,7 +564,9 @@ grp_BIC <- find.clusters.genind(gen,
                                 max.n.clust = 40)
 
 # plot BIC per K; chosen value for K highlighted in red - try 100, and 3
-plot.Kstat(grp_BIC, 3)
+plot.Kstat(grp_BIC, 4)
+
+bays_kstat <-grp_BIC$Kstat
 
 # determine optimum number of PCs to retain ====
 # scale allele frq/missing data replaced with mean
@@ -464,7 +586,7 @@ retain <- as.numeric(xval$`Number of PCs Achieving Highest Mean Success`)
 # perform DAPC using k-mean clusters as groups
 dapck <-dapc(gen, grp_BIC$grp, n.pca = retain) #not going to specifiy the number of da, retain 2.
 
-scatter(dapck, posi.da="bottomright", bg="white", pch=17:22, cstar=0, scree.pca=TRUE, posi.pca="bottomleft")
+scatter(dapck, posi.da="topright", bg="white", pch=17:22, cstar=0, scree.pca=TRUE, posi.pca="topleft")
 #clustering plot looks great. 
 
 #the second thing we want to know is how cluster assignments relate to original group assignments
@@ -474,11 +596,14 @@ GRP <- strata.schemes %>% dplyr::select(Ind, pop)
 
 kgrp <-left_join(kgrp,GRP, by="Ind")
 # show cluster distribution across populations
+kmeanscols <-c("blue","grey","orange","red")
 kgrps <-ddply(kgrp, pop~dapck$grp, summarize, group=n_distinct(Ind))
 kgrps %>%
   ggplot(aes(x=pop, y=group, fill=`dapck$grp`)) +
-  geom_bar(stat="identity",alpha=1, position=position_dodge())+
-  theme(axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "white"))
+  scale_fill_manual(values=kmeanscols)+ylab("number of individuals")+
+  geom_bar(stat="identity",alpha=0.7, position=position_dodge())+
+  theme(axis.text = element_text(size = 14, face="bold"),axis.title = element_text(size = 14,face="bold"),panel.background = element_rect(fill = 'white', colour = 'black'),
+        panel.grid.major = element_line(colour = "white"),panel.spacing = unit(1, "lines"))
 #so they're like evenly mixed across groups. 
 
 #ggsave("mortalitybarplot_drab.png", path="/Users/tdolan/Documents/Proposal/Figures")
@@ -492,12 +617,23 @@ GRP <- strata.schemes %>% dplyr::select(Ind, pop)
 
 # run intial DAPC ====
 set.seed(4)
-dapc1 <-dapc(gen, GRP$pop, n.pca = 500, n.da = 6)
-temp <- optim.a.score(dapc1);temp #very flat. 
-#the a score is very sensitive to the random trial, sometimes it's 104, sometimes 76, sometimes 97, sometimes 103, sometimes 88, sometimes it's 20?!!
 
-#we're going with 100
-dapcPop <-dapc(gen, GRP$pop, n.pca = 100, n.da =4, var.loadings = TRUE)
+# cross validation ====
+X <- scaleGen(gen, NA.method = "mean")
+
+xval <- xvalDapc(X, GRP$pop, 
+                 n.pca.max = 300, training.set = 0.9,
+                 result = "groupMean", center = TRUE, scale = FALSE,
+                 n.pca = NULL, n.rep = 30, xval.plot = TRUE)
+
+retain <- as.numeric(xval$`Number of PCs Achieving Highest Mean Success`); retain #says 150
+
+sdpc <-filter(xval$`Cross-Validation Results`, n.pca==retain)
+mean(sdpc$success)
+sem(sdpc$success)
+sd(sdpc$success)
+
+dapcPop <-dapc(gen, GRP$pop, n.pca = retain, n.da =4, var.loadings = TRUE)
 
 #BIPLOTS
 scatter(dapcPop, posi.da="bottomright", bg="white", pch=20, cstar=0, scree.pca=TRUE, posi.pca="bottomleft",col=drabcolors2, #clab=0, #turns labels on and off
@@ -510,21 +646,6 @@ contrib <- loadingplot(dapcPop$var.contr, axis=2,threshold = 0.02,lab.jitter=2)
 
 loads <-as.data.frame(dapcPop$var.contr) %>% rownames_to_column()%>% mutate(totalLD=LD1+LD2+LD3+LD4) %>% separate(rowname, c("locus","allele"), remove=FALSE)
 loads <-arrange(loads,desc(totalLD),locus)
-
-assignplot(dapcPop)
-compoplot(dapcPop, posi="bottomright", txt.leg=paste(c("Jamaica","Moriches","Mattituck","Napeague","Shinnecock")),show.lab=TRUE,
-           xlab="individuals", col=drabcolors)
-
-# cross validation ====
-X <- scaleGen(gen, NA.method = "mean")
-
-xval <- xvalDapc(X, GRP$pop, 
-                 n.pca.max = 300, training.set = 0.9,
-                 result = "groupMean", center = TRUE, scale = FALSE,
-                 n.pca = NULL, n.rep = 30, xval.plot = TRUE)
-
-retain <- as.numeric(xval$`Number of PCs Achieving Highest Mean Success`); retain #says 150
-
 
 # evaluate results ====
 # coordinates of indv/groups used in scatterplot
@@ -573,6 +694,7 @@ grp_membership <- as.data.frame(dapcPop$posterior) %>%
   left_join(GRP)
 
 #make your own compoplot
+grp_membership <-arrange(grp_membership, MEMBSHIP)
 memprob <-ggplot(grp_membership, aes(x = Ind, y = MEMBSHIP, fill = GRP)) +
   geom_bar(stat = "identity") +
   labs(x = "INDV", y = "memb. prob") +

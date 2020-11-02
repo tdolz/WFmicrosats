@@ -30,6 +30,8 @@ setwd("/Users//tdolan/Documents//R-Github//WFmicrosats")
 
 #toolpack
 sem <-function(x) sd(x)/sqrt(length(x))
+#geom flat_violin:
+  #https://gist.github.com/dgrtwo/eb7750e74997891d7c20
 
 
 ##### Formating the dataset #####
@@ -85,15 +87,15 @@ mtpop <-popsub(wfpopLD, sublist=c("Mt_1","Mt_2","Mt_3","Mt_4"))
 setPop(mtpop) <-~Bay/Con/Year
 
 ### REMEMEBER TO TURN THIS ON AND OFF. 
-wfpopLD <-mtpop
-
+wfpopLD <-wfyoy
+setPop(wfpopLD) <-~Bay/Year
 ######## Pairwise Relatedness ######
 
 #There are many different estimators for relatedness. In previous scripts we have tried more robust ways. 
 # for now, Shannon's way. https://gist.github.com/sjoleary/3efd4a7d56b115fad319781298765a31
 
 #convert to the right data format
-setPop(wfpopLD) <-~Bay/Con/Year
+setPop(wfpopLD) <-~Bay/Year
 df <-genind2df(wfpopLD, usepop = FALSE, oneColPerAll = TRUE) 
 df$Ind <- rownames(df)
 df <-df[,c(35,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34)]
@@ -186,23 +188,28 @@ relply
 
 #from the abbreviated simulation
   relsim2 <- as.data.frame(simreltri)
-  relply2<- ddply(relsim, ~group,summarize, mean.rel = mean(trioml),semrel =sem(trioml), LIrel = quantile(trioml,0.05), HIrel = quantile(trioml, 0.95), medianrel= quantile(trioml, 0.5))
+  relply2<- ddply(relsim2, ~group,summarize, mean.rel = mean(trioml),semrel =sem(trioml), LIrel = quantile(trioml,0.05), HIrel = quantile(trioml, 0.95), medianrel= quantile(trioml, 0.5))
   relply2
 
-#thresholds - the MEAN, you potato
-halfsibs <-0.250436
-fullsibs <-0.53108
-parentoffspring <-0.533866
-unrelated <-0.04928
-
+#thresholds - you want to know the mean but also the thresholds.
+halfsibs <- relply2[1,2]
+halfsibs.LCI <-relply2[1,4]
+halfsibs.HCI <-relply2[1,5]
+fullsibs <-relply2[3,2]
+fullsibs.LCI <-relply2[3,4]
+parentoffspring <-relply2[2,2] #not interesting when only doing yoy
+unrelated <-relply2[4,2]
+halfsibs.sem <-relply2[1,3]
 
 #trioml estimate (Wang) 
-relatedness_triad <- coancestry(genotypedata$gdata,trioml = 1) #remember to turn on 1 or 2
+relatedness_triad <- coancestry(genotypedata$gdata,trioml = 2) #remember to turn on 1 or 2, for no CI or w/ CI. 
 relatedT <- relatedness_triad$relatedness %>%
   dplyr::select(pair.no, ind1.id, ind2.id, trioml)
 
 relatedCI <- relatedness_triad$relatedness.ci95 %>%
   dplyr::select(pair.no, ind1.id, ind2.id, trioml.low, trioml.high)
+
+relatedT <-left_join(relatedT, relatedCI)
 
 library("readr")
 write_delim(relatedT, "pairwise_relatedness_trioml")
@@ -210,12 +217,13 @@ write_delim(relatedT, "pairwise_relatedness_trioml")
 # write inbreeding to file
 inbreed <- relatedness_triad$inbreeding %>%
   dplyr::select(ind.id, L3, LH) %>%
-  dplyr::rename(INDV = ind.id)
+  dplyr::rename(INDV = ind.id) %>% mutate(INDV=as.factor(INDV))
 write_delim(inbreed, "inbreeding")
 
 inbreed.ci <-relatedness_triad$inbreeding.ci95%>%
   dplyr::select(ind.id, L3.low, L3.high, LH.low, LH.high, LR.low, LR.high) %>%
-  dplyr::rename(INDV = ind.id)
+  dplyr::rename(INDV = ind.id)%>%mutate(INDV=as.factor(INDV))
+#this is problematic because the individual ID doesn't match up. But we won't worry because I don't think we will use the CI> 
 
 ######Inbreeding########
 # inbreeding  - you can put the values from the simulation in later. 
@@ -225,16 +233,16 @@ ggplot(inbreed, aes(x = L3)) +
              color = "black", linetype = "dashed", size = 0.5) +
   theme_cowplot()+
   labs(x = "inbreeding coefficient (Fis)", y = "individuals") 
-ggsave('inbreedldall.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
+ggsave('inbreedldyoyonly.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
 
-#inbreeding by bay. 
+#inbreeding by bay/year 
 popinfo <-dplyr::select(wfpop4df, Ind, Pop) %>% separate(Pop, c("Ocean","Bay","Con","Year"), remove=FALSE)
 wf.df <-mutate(popinfo,ind1.id=Ind,ind2.id=Ind)
 wf.df <-dplyr::rename(wf.df, INDV=Ind)
-inbreed <-left_join(inbreed, wf.df, by="INDV")
+inbreed <-left_join(inbreed, wf.df, by="INDV") %>% unite(BayYear,Bay,Year,sep=" ", remove=FALSE)
 
 inbreed %>%
-  ggplot(aes(x=fct_rev(Bay),y=L3))+ 
+  ggplot(aes(x=fct_rev(BayYear),y=L3))+ 
   #geom_boxplot(aes(fill=Bay))+ coord_flip()+
   ggplot2::stat_summary(fun.data = mean_sdl,fun.args = list(mult = 1),geom = "pointrange",position = ggplot2::position_nudge(x = 0.05, y = 0)) +coord_flip()+ 
   geom_flat_violin(aes(fill=Bay),position = position_nudge(x = .1, y = 0),adjust=2, trim = FALSE)+
@@ -243,12 +251,12 @@ inbreed %>%
   xlab(' ')+ylab("Inbreeding Coefficient (Fis)")+ 
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('indvinbreeding.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 8, height = 10)
-#it may be more appropriate to compare YOY only. 
+ggsave('indvinbreedingbayear.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 8, height = 10)
+
 
 ## anova to compare inbreeding between bays. 
 library("agricolae")
-anoin <-lm(L3~Con*Year, na.action=na.omit, data=inbreed)
+anoin <-lm(L3~BayYear, na.action=na.omit, data=inbreed)
 ano2 <-car::Anova(anoin)
 ano2
 ano3<-df.residual(anoin)
@@ -281,6 +289,24 @@ h <-dplyr::rename(h, Estimator=variable,Relatedness_Value=value)
 
 #how many of each? (based on estimator mean)
 n_distinct(relatedT)
+#percentage SIGNFICANTLY different from ZERO
+(filter(relatedT, trioml.low > 0) %>% n_distinct())/n_distinct(relatedT$pair.no)
+#relatedness values significantly less than the mean halfsibs value
+(filter(relatedT, trioml.high > halfsibs) %>% n_distinct())/n_distinct(relatedT$pair.no)
+#relatedness values less than the lower ci halfsibs value
+(filter(relatedT, trioml > halfsibs.LCI) %>% n_distinct())/n_distinct(relatedT$pair.no)
+#relatedness values greater than the mean halfsibs value - s.e.m (aka how many half sibs)
+(filter(relatedT, trioml < (halfsibs-halfsibs.sem)) %>% n_distinct())/n_distinct(relatedT$pair.no)
+#relatedness values SIGNIFICANTLY less than the mean halfsibs value - s.e.m (aka how many NOT half sibs)
+(filter(relatedT, trioml.high < (halfsibs-halfsibs.sem)) %>% n_distinct())/n_distinct(relatedT$pair.no)
+#relatedness values SIGNIFICANTLY greater than the mean halfsibs value - s.e.m (aka how many half sibs)
+(filter(relatedT, trioml.low > (halfsibs + halfsibs.sem)) %>% n_distinct())/n_distinct(relatedT$pair.no)
+
+#this is very confusing to me... but we can fix this by writing related t to a csv and doing it later. 
+
+
+#relatedness value is 
+
 filter(relatedT,trioml > halfsibs & trioml <= fullsibs) %>% n_distinct() #how many half sibs
 filter(relatedT, trioml > fullsibs) %>% n_distinct() #full sibs or parent offspring. 
 filter(relatedT, trioml > parentoffspring) %>% n_distinct() #parent offspring
