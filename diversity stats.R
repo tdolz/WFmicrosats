@@ -16,7 +16,6 @@ library('readr')
 library("reshape2")
 library("strataG")
 library("viridis")
-library("sgof")
 library("purrr")
 
 #keeping everything in this folder
@@ -242,7 +241,7 @@ shdd <-ddply(shar, ~variable, summarize,meanar=mean(value), sdar=sd(value)) #exc
 
 #csv of allellic richness
 AR <- bind_rows(meltar4,mtdd,shdd)
-write_excel_csv(AR,path="/Users/tdolan/Documents/WIP research/microsats/microsats_results/allelicrichness.csv")
+#write_excel_csv(AR,path="/Users/tdolan/Documents/WIP research/microsats/microsats_results/allelicrichness.csv")
 
 ####Private alleles ####
 #bay
@@ -284,7 +283,72 @@ meltSHpa <- pivot_longer(pA, cols=c("Shin_1_2016", "Shin_1_2017", "Shin_2_2016",
 PA <- bind_rows(meltpA,meltMTpa,meltSHpa)
 PA <-as.data.frame(PA)%>% mutate(variable=as.factor(variable))
 sumPA <-ddply(PA,~variable, summarize, meanPA=mean(value), sdPA=sd(value), sumPA=sum(value))
-write_excel_csv(sumPA,path="/Users/tdolan/Documents/WIP research/microsats/microsats_results/privatealleles.csv")
+#write_excel_csv(sumPA,path="/Users/tdolan/Documents/WIP research/microsats/microsats_results/privatealleles.csv")
+
+#heatmap of private alleles
+#Giant barplot
+PA2 <-filter(PA,variable %in% c("Nap","Mor","Jam","Shin","Shin_1_2016","Shin_2_2016","Shin_1_2017","Shin_2_2017","Mt","Mt_3_adults","Mt_4_adults","Mt_1_2015","Mt_2_2015","Mt_1_2016","Mt_2_2016"))
+PA2$variable <-fct_relevel(PA2$variable, c("Jam","Mor","Mt","Nap","Shin","Mt_1_2015","Mt_2_2015","Mt_1_2016","Mt_2_2016", "Mt_3_adults","Mt_4_adults","Shin_1_2016","Shin_2_2016","Shin_1_2017","Shin_2_2017"))
+
+PA2 %>%
+  #filter(variable %in% c("Mt","Shin","Nap","Mor","Jam"))%>%
+ggplot(aes(x = LOCUS, y = fct_rev(variable), fill=value)) +
+  geom_tile(color = "black") +
+  geom_text(aes(label = ifelse(value > 0, value, "")), color="grey") +
+  scale_fill_viridis(option="plasma") +
+  coord_fixed(ratio = 1) +
+  ylab("")+
+  #theme_standard() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+ggsave('pabayheat17.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
+
+#also calculate within bays. 
+#bay
+setPop(wfpopLD)<-~Bay/Con/Year
+df <-genind2df(wfpopLD, usepop = TRUE, oneColPerAll = TRUE) 
+df$Ind <- rownames(df)
+df <-df[,c(36,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35)]
+df[df=="NA"] <- 0 # missing data must be 0
+wf.g <-df2gtypes(df,ploidy=2)
+library("data.table")
+pA <-as.data.frame(privateAlleles(wf.g)) 
+setDT(pA,keep.rownames=TRUE)
+colnames(pA)[1] <- "LOCUS"
+meltpA22 <- pivot_longer(pA, cols=c("Jam_6_2016", "Mor_6_2016", "Mt_1_2015", "Mt_1_2016", "Mt_2_2015", "Mt_2_2016", "Mt_3_adults", "Mt_4_adults", "Mt_5_2015", "Mt_5_2016", "Nap_6_2016", "Shin_1_2016", "Shin_1_2017", "Shin_2_2016", "Shin_2_2017"),names_to="variable", values_to="value")
+
+meltpA22$variable <-fct_relevel(meltpA22$variable, c("Jam_6_2016", "Mor_6_2016","Nap_6_2016", "Mt_1_2015", "Mt_1_2016", "Mt_2_2015", "Mt_2_2016", "Mt_3_adults", "Mt_4_adults", "Mt_5_2015", "Mt_5_2016",  "Shin_1_2016", "Shin_1_2017", "Shin_2_2016", "Shin_2_2017"))
+
+meltpA22 %>%
+  filter(variable %in% c("Jam_6_2016", "Mor_6_2016", "Mt_1_2015", "Mt_1_2016", "Mt_2_2015", "Mt_2_2016", "Mt_3_adults", "Mt_4_adults", "Nap_6_2016", "Shin_1_2016", "Shin_1_2017", "Shin_2_2016", "Shin_2_2017"))%>%
+  ggplot(aes(x = LOCUS, y = fct_rev(variable), fill=value)) +
+  geom_tile(color = "black") +
+  geom_text(aes(label = ifelse(value > 0, value, "")), color="grey") +
+  scale_fill_viridis(option="plasma") +
+  coord_fixed(ratio = 1) +
+  ylab("")+
+  #theme_standard() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+ggsave('paheat17byc.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
+
+#Combined heatmap. 
+meltpA23 <- filter(meltpA22, variable %in% c("Mt_1_2016", "Mt_2_2015", "Mt_2_2016", "Mt_3_adults", "Mt_4_adults",  "Shin_1_2016", "Shin_1_2017", "Shin_2_2016", "Shin_2_2017")) %>% dplyr::rename(valueBYC=value)
+PA3 <-filter(PA2,variable %in% c("Nap","Mor","Jam","Shin","Shin_1_2016","Shin_2_2016","Shin_1_2017","Shin_2_2017","Mt","Mt_3_adults","Mt_4_adults","Mt_1_2015","Mt_2_2015","Mt_1_2016","Mt_2_2016")) 
+PA4=full_join(meltpA23,PA3)
+PA4 <-mutate(PA4, valueBYC=ifelse(is.na(valueBYC),value,valueBYC))
+PA4$variable <-fct_relevel(PA4$variable, c("Jam","Mor","Mt","Nap","Shin","Mt_1_2015","Mt_2_2015","Mt_1_2016","Mt_2_2016", "Mt_3_adults","Mt_4_adults","Shin_1_2016","Shin_2_2016","Shin_1_2017","Shin_2_2017"))
+
+
+PA4 %>%
+  ggplot(aes(x = LOCUS, y = fct_rev(variable), fill=valueBYC)) +
+  geom_tile(color = "black") +
+  geom_text(aes(label = ifelse(value > 0, value, "")), color="grey") +
+  scale_fill_viridis(option="plasma") +
+  coord_fixed(ratio = 1) +
+  ylab("")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1), axis.text = element_text(size = 12),axis.title = element_text(size = 12),panel.background = element_rect(fill = 'white', colour = 'black'),
+      panel.grid.major = element_line(colour = "white"))
+#
+
 
 
 #### Recalculate HS vecause Hs and Ht are the same.###  
@@ -352,6 +416,32 @@ srel2 <-cbind(wfp,srel2)
 srel2 <-dplyr::select(srel2,Ind,pop,IR)
 ddply(srel2, ~pop, summarize, meanir=mean(IR),sdir=sd(IR))
 
+rel3 <-bind_rows(rel2,orel2,mrel2,srel2) 
+
+
+#anova on relatedness: BAY
+Irov <- lm(IR~pop, data=rel2,  na.action=na.omit)
+car::Anova(Irov)
+df<-df.residual(Irov)
+MSerror<-deviance(Irov)/df
+comparison <- HSD.test(Irov,c("pop"),MSerror=MSerror,alpha=0.05/5,  group=TRUE)
+comparison
+
+#anova on relatedness: mattituck
+Irov <- lm(IR~pop, data=mrel2,  na.action=na.omit)
+car::Anova(Irov)
+df<-df.residual(Irov)
+MSerror<-deviance(Irov)/df
+comparison <- HSD.test(Irov,c("pop"),MSerror=MSerror,alpha=0.05/6,  group=TRUE)
+comparison
+
+#anova on relatedness: shinnecock
+Irov <- lm(IR~pop, data=srel2,  na.action=na.omit)
+car::Anova(Irov)
+df<-df.residual(Irov)
+MSerror<-deviance(Irov)/df
+comparison <- HSD.test(Irov,c("pop"),MSerror=MSerror,alpha=0.05/4,  group=TRUE)
+comparison
 
 #####Giant bar plot####
 #get the dataframe together. 
@@ -368,6 +458,11 @@ PA <- bind_rows(meltpA,meltMTpa,meltSHpa) %>%as.data.frame()%>%dplyr::rename(GRP
 #is not by locus, so you can't really do it. That's ok. 
 allstats <-full_join(allstats,rar) %>% full_join(PA) %>%mutate(GRP=as.factor(GRP),LOCUS=as.factor(LOCUS), variable=as.factor(variable))
 
+#you can actually tricky force IR to be in there. just rename the columns. 
+rel3 <-dplyr::rename(rel3, LOCUS=Ind,GRP=pop, value=IR) %>% mutate(variable="IR", GRP=as.factor(GRP))
+rel3 <-mutate_at(rel3,.vars=vars(GRP),.funs=forcats::fct_recode, ALL="Atl")
+allstats <-full_join(allstats, rel3) %>%mutate(GRP=as.factor(GRP),LOCUS=as.factor(LOCUS), variable=as.factor(variable))
+
 #allcolors <-c("grey","#d0d1e6","#a6bddb","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#1c9099","#016450","#016450","#016450","#016450","#016450")
 allcolors <-c("grey","#d0d1e6","#a6bddb","#67a9cf","#1c9099","#016450","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#016450","#016450","#016450","#016450")
 
@@ -378,7 +473,8 @@ allstats$GRP <-fct_relevel(allstats$GRP, c("ALL","Jam","Mor","Mt","Nap","Shin","
 allstats %>%
   mutate(GRP=as.factor(GRP)) %>%
   #filter(variable %in% c("SIMPSON_IDX", "EVENNESS","Ho","Hs","Ht","Fis","PA","Ar", "Hdef")) %>%
-  filter(variable %in% c("SIMPSON_IDX", "EVENNESS","Ht","Fis","PA","Ar")) %>%
+  #filter(variable %in% c("SIMPSON_IDX", "EVENNESS","Ht","Fis","PA","Ar")) %>%
+  filter(variable %in% c("SIMPSON_IDX", "EVENNESS","Ht","Fis","IR","Ar")) %>%
   ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
   geom_boxplot(aes(fill=GRP))+ 
   scale_fill_manual(name = "GRP",values = allcolors)+
@@ -386,7 +482,7 @@ allstats %>%
   facet_wrap(~variable, scales="free_x", nrow=2)+ 
   theme(axis.text = element_text(size = 14, face="bold"),axis.title = element_text(size = 14,face="bold"),panel.background = element_rect(fill = 'white', colour = 'black'),
         panel.grid.major = element_line(colour = "white"),panel.spacing = unit(1, "lines"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('alllocstats17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 14, height = 10)
+ggsave('alllocstats17IR.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 14, height = 10)
 
 
 
@@ -403,6 +499,7 @@ e<-friedman.test(Fis~GRP | LOCUS, data= fdata) #Fis
 f<-friedman.test(SIMPSON_IDX~GRP | LOCUS, data= fdata) 
 g<-friedman.test(value~variable | LOCUS, data= meltar3) #rareified alleles #come back to this one.... 
 h<-friedman.test(value~variable | LOCUS, data= meltpA) #private alleles
+
 
 tests <-c("EVENNESS","Ht","Fis","SIMPSON_IDX","Ar","Pa")
 pvals <-c(b$p.value, c$p.value, e$p.value, f$p.value, g$p.value, h$p.value)
@@ -575,3 +672,32 @@ for(p in 1:n){
 
 splitres <- dplyr::rename(results, Pr.exact=p.value)%>% dplyr::select(-temp)%>% split(.$test)%>%map_dfr(pradj)
 write.csv(splitres,file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/wilcoxOCt29SHI.csv" )
+
+
+### Genetic distance ####
+#### Genetic Distance ####
+
+## Tree's using provesti's distance
+
+#all bays?
+set.seed(999)
+wfpopLD %>%
+  genind2genpop(pop = ~Bay) %>%
+  aboot(cutoff = 50, quiet = TRUE, sample = 1000, distance = provesti.dist, missingno="ignore")
+#This one makes a lot of sense
+
+#Mattituck
+set.seed(999)
+setpop(mtco) <-~Bay/Con/Year
+mtco %>%
+  genind2genpop(pop = ~Bay/Con/Year) %>%
+  aboot(cutoff = 50, quiet = TRUE, sample = 1000, distance = provesti.dist, missingno="ignore")
+
+#Shinnecock
+set.seed(999)
+setPop(shinco) <-~Bay/Con/Year
+shinco %>%
+  genind2genpop(pop = ~Bay/Con/Year) %>%
+  aboot(cutoff = 50, quiet = TRUE, sample = 1000, distance = provesti.dist, missingno="ignore")
+
+### Alpha & Beta diversity ####

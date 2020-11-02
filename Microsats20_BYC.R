@@ -30,9 +30,8 @@ library("strataG")
 setwd("/Users//tdolan/Documents//R-Github//WFmicrosats")
 
 ##### Formating the dataset #####
-# We are going to use the doubl0 version. 
-wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept20204genalex_doubl0.csv")
-wfpop4df <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept2020_doubl0.csv", header = TRUE) #csv version 
+wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept20204genalex_doubl0ABC.csv")
+wfpop4df <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept2020_doubl0ABC.csv", header = TRUE) #csv
 
 splitStrata(wfpop) <-~Ocean/Bay/Con/Year
 setPop(wfpop) <-~Bay
@@ -904,4 +903,7 @@ wf.s %>%
   genind2genpop(pop = ~Bay/Con/Year) %>%
   aboot(cutoff = 50, quiet = TRUE, sample = 1000, distance = provesti.dist, missingno="ignore")
 
+#within mattituck. 
+
+#considering all groups... 
 

@@ -31,11 +31,13 @@ setwd("/Users//tdolan/Documents//R-Github//WFmicrosats")
 
 ##### Formating the dataset #####
 # We are going to use the doubl0 version. 
-wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept20204genalex_doubl0.csv")
-wfpop4df <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept2020_doubl0.csv", header = TRUE) #csv version 
+##### Formating the dataset #####
+wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept20204genalex_doubl0ABC.csv")
+wfpop4df <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept2020_doubl0ABC.csv", header = TRUE) #csv
 
 splitStrata(wfpop) <-~Ocean/Bay/Con/Year
 setPop(wfpop) <-~Bay
+
 
 #look at missing data
 #Where missing data is greater than 10% for that locus...the locus is not informative for that bay.
@@ -397,9 +399,6 @@ df <- allelic.richness(dat,diploid = TRUE)
 df <- as.data.frame(df$Ar) %>%
   rownames_to_column("LOCUS") %>%
   dplyr::rename(Nap = V1,Mor = V2,Jam = V3,Shin = V4,Mt = V5)
-  dplyr::rename(Nap=V1, Mor=V2, Jam=V3, Shin_1_2016=V4, Shin_2_2016=V5, Mt_2_2015=V6,   Mt_1_2015=V7,
-                Mt_2_2016 =V8,  Mt_1_2016=V9, Mt_3_2015=V10,Mt_4_2015=V11, Mt_5_2015=   "Mt_3_2016"   "Mt_4_2016"   "Mt_5_2016"   "Shin_1_2017" "Shin_2_2017")
-
 ar <- left_join(ar, df)
 
 #write_delim(ar, "results/rarefied.allelecount", delim = "\t")
@@ -459,14 +458,6 @@ meltpA %>%
 ggsave('privateallelesLD_bay17.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
 
 
-#rareified allelic richness by bay. 
-meltar_all #all
-meltar3 #by bay.
-
-#private alleles 
-meltpA #by bay
-
-#loci in HWE by bay. 
 
 
 
