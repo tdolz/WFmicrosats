@@ -26,6 +26,8 @@ sem <-function(x) sd(x)/sqrt(length(x))
 clust <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/colonyclust.csv", header = TRUE)
 halfs <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/colonyhalfsibs.csv", header = TRUE)
 wfpop4df <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept2020_doubl0ABC.csv", header = TRUE) #csv version 
+rel_mt <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/relmt.csv",header = TRUE)
+rel_shin <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/relshin.csv",header = TRUE)
 
 #join pop info to clusts 
 popinfo <-dplyr::select(wfpop4df, Ind, Pop) %>% separate(Pop, c("Ocean","Bay","Con","Year"), remove=FALSE)
@@ -127,6 +129,24 @@ Mtmom17 %>%
         axis.text.y = element_text(size = 10),axis.text.x=element_text(size = 5),axis.title = element_text(size =10),
         panel.background = element_rect(fill = "white", colour = "black"))
 ggsave('Mtmoms17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 4, height = 8)
+
+#compare families to relatedness
+#join relatedness info to colony info
+rel_mt <-mutate(rel_mt, ind1.id=as.factor(ind1.id), ind2.id=as.factor(ind2.id))
+sibjoin <-dplyr::select(Mtclust, clust, Ind, father, mother, prob) %>% mutate(Ind=as.factor(Ind))
+sj1 <-dplyr::rename(sibjoin, ind1.id=Ind, clust1=clust, father1=father, mother1=mother, prob1=prob) 
+sj <-left_join(sj1, rel_mt, by=c("ind1.id"))
+sj2 <-dplyr::rename(sibjoin, ind2.id=Ind, clust2=clust, father2=father, mother2=mother, prob2=prob)
+sj <-left_join(sj2,sj, by=c("ind2.id"))
+
+#find full siblings
+siblings <-filter(sj, father1==father2 & mother1==mother2)
+
+
+
+
+
+
 
 
 #SHINNECOCK BAY
