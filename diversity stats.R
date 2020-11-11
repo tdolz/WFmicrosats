@@ -17,6 +17,7 @@ library("reshape2")
 library("strataG")
 library("viridis")
 library("purrr")
+library("diveRsity") #this one fucked everything. 
 
 #keeping everything in this folder
 setwd("/Users//tdolan/Documents//R-Github//WFmicrosats")
@@ -93,6 +94,14 @@ spop <-seppop(shinco) %>% lapply(hw.test)
 (pradj(spop$Shin_2_2016))
 (pradj(spop$Shin_1_2017))
 (pradj(spop$Shin_2_2017))
+
+
+###Migration with divMigrate####
+setPop(wfpopLD) <-~Bay
+wfpopmig <-genind2genpop(wfpopLD, pop = ~Bay)
+
+
+
 
 
 ## Diversity stats ### 

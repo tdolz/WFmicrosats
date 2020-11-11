@@ -410,9 +410,9 @@ MSerror<-deviance(anorel)/ano3
 comparison <- HSD.test(anorel,c("BayPair"),MSerror=MSerror, unbalanced=TRUE,alpha=0.05/10, group=TRUE)
 comparison
 
-#hs2 <-filter(hs, Bay1=="Shin" & Bay2=="Shin")
+#Mattituck
 hs2 <-filter(hs, Bay1=="Mt" & Bay2=="Mt")
-
+#write_excel_csv(hs2, path="/Users/tdolan/Documents/WIP research/microsats/microsats_results/relmt.csv")
 half_sibs <-filter(hs2, Relatedness_Value > halfsibs & Relatedness_Value < 0.40)
 full_sibs <-filter(hs2, Relatedness_Value > 0.40)
 all_sibs <-filter(hs2, Relatedness_Value > halfsibs)
@@ -467,6 +467,7 @@ ggsave('Mtrelheatmag.png', path="/Users/tdolan/Documents/WIP research/microsats/
 
 #now for shinnecock. 
 hs2 <-filter(hs, Bay1=="Shin" & Bay2=="Shin")
+#write_excel_csv(hs2, path="/Users/tdolan/Documents/WIP research/microsats/microsats_results/relshin.csv")
 half_sibs <-filter(hs2, Relatedness_Value > halfsibs & Relatedness_Value < 0.40)
 full_sibs <-filter(hs2, Relatedness_Value > 0.40)
 all_sibs <-filter(hs2, Relatedness_Value > halfsibs)
@@ -539,7 +540,9 @@ sum_rel2 <-left_join(sum_rel, in_rel, by=c("ConYear1")) %>% dplyr::select(-ConYe
 sum_rel2 <-left_join(sum_rel2, in_rel, by=c("ConYear2")) %>% dplyr::select(-ConYear.x, -ConYear.y, -ConYear1.y)%>%
   dplyr::rename(L3.cy2 = mean.L3, LH.cy2 =mean.LH, ConYear1 = ConYear1.x)
 
-cor.test(sum_rel2$percentsib, sum_rel2$avr,  method = "pearson", exact=TRUE)
+cor.test(sum_rel2$avr, sum_rel2$L3.cy1,  method = "pearson", exact=TRUE)
+cor.test(sum_rel2$avr, sum_rel2$L3.cy2,  method = "pearson", exact=TRUE)
+
 cor.test(sum_rel2$percentsib, sum_rel2$L3.cy1,method = "pearson", exact=TRUE) #inbreeding of first conyear to percent siblings
 cor.test(sum_rel2$percentsib, sum_rel2$L3.cy2,method = "pearson", exact=TRUE) #inbreeding of second conyear to percent siblings
 
