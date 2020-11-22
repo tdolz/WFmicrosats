@@ -18,6 +18,7 @@ library("strataG")
 library("viridis")
 library("purrr")
 library("diveRsity") #this one fucked everything. 
+library("graph4lg")
 
 #keeping everything in this folder
 setwd("/Users//tdolan/Documents//R-Github//WFmicrosats")
@@ -42,6 +43,9 @@ keeploc <- setdiff(all_loci, removeloc)# create list of loci to keep
 wfpopLD <- wfpopLD[loc = keeploc]
 wfpopLD <-wfpopLD %>% missingno("loci", cutoff=0.30) # removes loci where overall missingness > 30%, so WF01
 wfpopLD <- wfpopLD %>% missingno("geno", cutoff=0.25) # remove samples that are > 25% missing
+
+wfpopLD2 <-genind2genpop(wfpopLD)
+
 
 ## Subset databases
 #shinnecock only database
@@ -98,10 +102,14 @@ spop <-seppop(shinco) %>% lapply(hw.test)
 
 ###Migration with divMigrate####
 setPop(wfpopLD) <-~Bay
-wfpopmig <-genind2genpop(wfpopLD, pop = ~Bay)
+wfpopmig <-genind_to_genepop(wfpopLD, output="data.frame")
+wfpop4genepop <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/wfgenepop20_sept2020.csv", header = TRUE) #csv
+divRNI <-read.delim("/Users//tdolan/Documents//R-Github//WFmicrosats/divRNI")
 
-
-
+t <-diveRsity::divMigrate(infile=divRNI, outfile = NULL, boots = 1000, stat = "all", 
+                         filter_threshold = 0.50, plot_network = TRUE, 
+                         plot_col = "darkblue", para = FALSE)
+#save as 500 x 500
 
 
 ## Diversity stats ### 

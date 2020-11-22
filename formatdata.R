@@ -59,6 +59,54 @@ write_delim(nepop16, "nepop_datafile")
 
 #nepop16 <-filter(nepop, Pop %in% c("Atl_Jam_6_2016","Atl_Mor_6_2016","Atl_Mt_1_2016","Atl_Mt_2_2016","Atl_Nap_6_2016","Atl_Shin_1_2016","Atl_Shin_2_2016"))
 
+###format for divRsity
+### format for NE estimator
+divR <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept2020_doubl0ABC.csv", header = TRUE) #csv version 
+
+divR <-tidyr::separate(divR, Pop, c("Oc", "Bay", "Con", "Year"))%>% dplyr::select(-Oc, -Con, -Year)
+divR <- dplyr::select(divR, -WF01.1, -WF01.2, -WF06.1, -WF06.2, -WF27.1, -WF27.2) #exclude loci with missing data and LD. 
+divR <- tidyr::unite(divR, J42, J42.1, J42.2, sep="") %>% 
+  tidyr::unite(WF22, WF22.1, WF22.2, sep="") %>% tidyr::unite(PAM27, PAM27.1, PAM27.2, sep="")%>%
+  tidyr::unite(PAM79, PAM79.1, PAM79.2, sep="") %>% tidyr::unite(WF16, WF16.1, WF16.2, sep="")%>%
+  tidyr::unite(WF33, WF33.1, WF33.2, sep="") %>% tidyr::unite(WF3, WF3.1, WF3.2, sep="")%>%
+  tidyr::unite(WF517, WF517.1, WF517.2, sep="") %>% tidyr::unite(WF196, WF196.1, WF196.2, sep="")%>%
+  tidyr::unite(WF223, WF223.1, WF223.2, sep="") %>% tidyr::unite(WF421, WF421.1, WF421.2, sep="")%>%
+  tidyr::unite(A441, A441.1, A441.2, sep="") %>% tidyr::unite(PAM21, PAM21.1, PAM21.2, sep="")%>%
+  tidyr::unite(Psy087, Psy087.1, Psy087.2, sep="") %>% tidyr::unite(Psy022, Psy022.1, Psy022.2, sep="")%>%
+  tidyr::unite(WF12, WF12.1, WF12.2, sep="") %>% tidyr::unite(WF32, WF32.1, WF32.2, sep="")
+
+divR[divR=="00"] <- "000000" # missing data must be -9
+
+divR <- divR[,c(1,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,2)]
+divR <-dplyr::rename(divR, pop=Bay)
+
+write_delim(divR, "divR_datafile")
+
+#divRnoind
+divRNI <-divR[,c(19,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18)]
+divRNI <-dplyr::select(divRNI, -Ind)
+write_delim(divRNI, "divRNI_datafile")
+
+##Format for Migrate
+mig <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept2020_doubl0ABC.csv", header = TRUE) #csv version 
+
+mig <-tidyr::separate(mig, Pop, c("Oc", "Bay", "Con", "Year"))%>% dplyr::select(-Oc, -Con, -Year)
+mig <- dplyr::select(mig, -WF01.1, -WF01.2, -WF06.1, -WF06.2, -WF27.1, -WF27.2) #exclude loci with missing data and LD. 
+mig <- tidyr::unite(mig, J42, J42.1, J42.2, sep=".") %>% 
+  tidyr::unite(WF22, WF22.1, WF22.2, sep=".") %>% tidyr::unite(PAM27, PAM27.1, PAM27.2, sep=".")%>%
+  tidyr::unite(PAM79, PAM79.1, PAM79.2, sep=".") %>% tidyr::unite(WF16, WF16.1, WF16.2, sep=".")%>%
+  tidyr::unite(WF33, WF33.1, WF33.2, sep=".") %>% tidyr::unite(WF3, WF3.1, WF3.2, sep=".")%>%
+  tidyr::unite(WF517, WF517.1, WF517.2, sep=".") %>% tidyr::unite(WF196, WF196.1, WF196.2, sep=".")%>%
+  tidyr::unite(WF223, WF223.1, WF223.2, sep=".") %>% tidyr::unite(WF421, WF421.1, WF421.2, sep=".")%>%
+  tidyr::unite(A441, A441.1, A441.2, sep=".") %>% tidyr::unite(PAM21, PAM21.1, PAM21.2, sep=".")%>%
+  tidyr::unite(Psy087, Psy087.1, Psy087.2, sep=".") %>% tidyr::unite(Psy022, Psy022.1, Psy022.2, sep=".")%>%
+  tidyr::unite(WF12, WF12.1, WF12.2, sep=".") %>% tidyr::unite(WF32, WF32.1, WF32.2, sep=".")
+
+mig[mig=="0.0"] <- "?.?" # missing data must be "?"
+
+write_delim(mig, "mig_datafile")
+write_excel_csv(mig,"mig_csv.csv")
+
 
 ### Format data for COLONY
 ### format for NE estimator
