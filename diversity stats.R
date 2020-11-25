@@ -105,11 +105,20 @@ setPop(wfpopLD) <-~Bay
 wfpopmig <-genind_to_genepop(wfpopLD, output="data.frame")
 wfpop4genepop <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/wfgenepop20_sept2020.csv", header = TRUE) #csv
 divRNI <-read.delim("/Users//tdolan/Documents//R-Github//WFmicrosats/divRNI")
+divRNIrare<-read.delim("/Users//tdolan/Documents//R-Github//WFmicrosats/divRNI_rareified")
 
 t <-diveRsity::divMigrate(infile=divRNI, outfile = NULL, boots = 1000, stat = "all", 
-                         filter_threshold = 0.50, plot_network = TRUE, 
+                         filter_threshold = 0.5, plot_network = TRUE, 
                          plot_col = "darkblue", para = FALSE)
 #save as 500 x 500
+
+#maybe you need to rareify it?
+#trial rareification, individuals haphazardly removed from the delim file. 
+divRNIrare<-read.delim("/Users//tdolan/Documents//R-Github//WFmicrosats/divRNI_rareified")
+
+#create a rareified version using only 2016 YOY.
+
+#create a version of split pops 
 
 
 ## Diversity stats ### 
@@ -358,7 +367,7 @@ PA4$variable <-fct_relevel(PA4$variable, c("Jam","Mor","Mt","Nap","Shin","Mt_1_2
 PA4 %>%
   ggplot(aes(x = LOCUS, y = fct_rev(variable), fill=valueBYC)) +
   geom_tile(color = "black") +
-  geom_text(aes(label = ifelse(value > 0, value, "")), color="grey") +
+  geom_text(aes(label = ifelse(valueBYC > 0, valueBYC, "")), color="grey") +
   scale_fill_viridis(option="plasma") +
   coord_fixed(ratio = 1) +
   ylab("")+
