@@ -105,20 +105,60 @@ setPop(wfpopLD) <-~Bay
 wfpopmig <-genind_to_genepop(wfpopLD, output="data.frame")
 wfpop4genepop <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/wfgenepop20_sept2020.csv", header = TRUE) #csv
 divRNI <-read.delim("/Users//tdolan/Documents//R-Github//WFmicrosats/divRNI")
-divRNIrare<-read.delim("/Users//tdolan/Documents//R-Github//WFmicrosats/divRNI_rareified")
+#divRNIrare<-read.delim("/Users//tdolan/Documents//R-Github//WFmicrosats/divRNI_rareified")
 
 t <-diveRsity::divMigrate(infile=divRNI, outfile = NULL, boots = 1000, stat = "all", 
-                         filter_threshold = 0.5, plot_network = TRUE, 
+                         filter_threshold = 0.3, plot_network = TRUE, 
                          plot_col = "darkblue", para = FALSE)
 #save as 500 x 500
 
 #maybe you need to rareify it?
 #trial rareification, individuals haphazardly removed from the delim file. 
-divRNIrare<-read.delim("/Users//tdolan/Documents//R-Github//WFmicrosats/divRNI_rareified")
 
 #create a rareified version using only 2016 YOY.
+divRNIrare<-read.delim("/Users//tdolan/Documents//R-Github//WFmicrosats/divRNI16rare.txt")
+divRNIrare[divRNIrare=="0"] <-"000000"
+
+t <-diveRsity::divMigrate(infile=divRNIrare, outfile = NULL, boots = 1000, stat = "all", 
+                          filter_threshold = 0, plot_network = TRUE, 
+                          plot_col = "darkblue", para = FALSE)
 
 #create a version of split pops 
+# in this version we are not splitting by cohort but are splitting YOY by year
+# we did split migrants and residents, but we did away with the Mt Unknowns
+divRNIsplit<-read.delim("/Users//tdolan/Documents//R-Github//WFmicrosats/divRNIsplitpop.txt")
+divRNIsplit[divRNIsplit=="0"] <-"000000"
+
+t <-diveRsity::divMigrate(infile=divRNIsplit, outfile = NULL, boots = 1000, stat = "all", 
+                          filter_threshold = 0.5, plot_network = TRUE, 
+                          plot_col = "darkblue", para = FALSE)
+#very interesting that the resident adults are outgrouped, but could be because we didn't rareify. 
+
+#to make it less convoluted, here we are only going to split the adults
+divRNIad<-read.delim("/Users//tdolan/Documents//R-Github//WFmicrosats/divRNIsplit_adults.txt")
+divRNIad[divRNIad=="0"] <-"000000"
+
+t <-diveRsity::divMigrate(infile=divRNIad, outfile = NULL, boots = 1000, stat = "all", 
+                          filter_threshold = 0.3, plot_network = TRUE, 
+                          plot_col = "darkblue", para = FALSE)
+
+
+#add rareified Mt adults to the rareified Shin YOY for 2016 only
+divRNIsplitrare16<-read.delim("/Users//tdolan/Documents//R-Github//WFmicrosats/divRNIsplitrare16.txt")
+divRNIsplitrare16[divRNIsplitrare16=="0"] <-"000000"
+
+t <-diveRsity::divMigrate(infile=divRNIsplitrare16, outfile = NULL, boots = 1000, stat = "all", 
+                          filter_threshold = 0.5, plot_network = TRUE, 
+                          plot_col = "darkblue", para = FALSE)
+
+#rareify the whole population instead of just YOY 2016
+divRareall<-read.delim("/Users//tdolan/Documents//R-Github//WFmicrosats/rareified_all.txt")
+divRareall[divRareall=="0"] <-"000000"
+
+t <-diveRsity::divMigrate(infile=divRareall, outfile = NULL, boots = 1000, stat = "all", 
+                          filter_threshold = 0.4, plot_network = TRUE, 
+                          plot_col = "darkblue", para = FALSE)
+
 
 
 ## Diversity stats ### 
