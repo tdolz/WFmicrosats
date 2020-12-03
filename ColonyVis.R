@@ -95,7 +95,7 @@ Mtbb17 %>%
   facet_wrap(~ConYear, nrow=4)+
   xlab("family")+ylab("number of offspring")+
   theme(strip.background =element_rect(fill="white"),strip.text = element_text(colour = 'black', face="bold"),
-        axis.text.y = element_text(size = 10),axis.text.x=element_text(size = 5),axis.title = element_text(size =10),
+        axis.text.y = element_text(size = 12),axis.text.x=element_text(size = 12),axis.title = element_text(size =12),
         panel.background = element_rect(fill = "white", colour = "black"))
 ggsave('Mtfam17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 4, height = 8)
 
@@ -110,7 +110,7 @@ ggplot(aes(father, fill=countgroups))+
   facet_wrap(~ConYear, nrow=4)+
   xlab("father")+ylab("number of offspring")+
   theme(strip.background =element_rect(fill="white"),strip.text = element_text(colour = 'black', face="bold"),
-        axis.text.y = element_text(size = 10),axis.text.x=element_text(size = 5),axis.title = element_text(size =10),
+        axis.text.y = element_text(size = 12),axis.text.x=element_text(size = 12),axis.title = element_text(size =12),
         panel.background = element_rect(fill = "white", colour = "black"))
 ggsave('Mtdads17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 4, height = 8)
 
@@ -126,7 +126,7 @@ Mtmom17 %>%
   facet_wrap(~ConYear, nrow=4)+
   xlab("mother")+ylab("number of offspring")+
   theme(strip.background =element_rect(fill="white"),strip.text = element_text(colour = 'black', face="bold"),
-        axis.text.y = element_text(size = 10),axis.text.x=element_text(size = 5),axis.title = element_text(size =10),
+        axis.text.y = element_text(size = 12),axis.text.x=element_text(size = 12),axis.title = element_text(size =12),
         panel.background = element_rect(fill = "white", colour = "black"))
 ggsave('Mtmoms17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 4, height = 8)
 
@@ -179,7 +179,7 @@ Shibb17 %>%
   facet_wrap(~ConYear, nrow=4)+
   xlab("family")+ylab("number of offspring")+
   theme(strip.background =element_rect(fill="white"),strip.text = element_text(colour = 'black', face="bold"),
-        axis.text.y = element_text(size = 10),axis.text.x=element_text(size = 5),axis.title = element_text(size =10),panel.background = element_rect(fill = "white", colour = "black"))
+        axis.text.y = element_text(size = 12),axis.text.x=element_text(size = 12),axis.title = element_text(size =12),panel.background = element_rect(fill = "white", colour = "black"))
 ggsave('Shifam17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 4, height = 8)
 
 #fathers
@@ -208,7 +208,7 @@ Shimom17 %>%
   facet_wrap(~ConYear, nrow=4)+
   xlab("mother")+ylab("number of offspring")+
   theme(strip.background =element_rect(fill="white"),strip.text = element_text(colour = 'black', face="bold"),
-        axis.text.y = element_text(size = 10),axis.text.x=element_text(size = 5),axis.title = element_text(size =10),
+        axis.text.y = element_text(size = 12),axis.text.x=element_text(size = 12),axis.title = element_text(size =10),
         panel.background = element_rect(fill = "white", colour = "black"))
 ggsave('Shimoms17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 4, height = 8)
 

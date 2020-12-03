@@ -42,6 +42,7 @@ mtage %>%
 spawndate <-dplyr::rename(spawndate, fishID=Tag.ID)
 mtage2 <-left_join(mtage,spawndate, by="fishID")
 #now we have spawning date and settlement date. 
+filter(mtage2, cohort=="2") %>% mean(Spawning.Date)
 
 #histograms where catherine's cohorts are overlaid on the regular cohort data. 
 ## original script is called "field graphs 9_10_19.R"

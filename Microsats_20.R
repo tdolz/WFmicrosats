@@ -980,15 +980,61 @@ library("MASS")
 dens <- kde2d(Dgeo2,Dgen, n=300)
 myPal <- colorRampPalette(c("white","blue","gold", "orange", "red"))
 plot(Dgeo2, Dgen, xlab="distance (KM)", ylim= c(0.12, 0.35),ylab="genetic distance (euclidean)")
-image(dens, col=transp(myPal(500),0.4), add=TRUE)
+#image(dens, col=transp(myPal(500),0.4), add=TRUE)
 abline(lm(Dgen~Dgeo2))
 #strong looking pattern of IBD. 
 library("car")
 Anova(lm(Dgen~Dgeo2))
 summary(lm(Dgen~Dgeo2))
 
+###compare to migration rates?
+Dgeo2 #geographic distance matrix. 
+
+mig.Nei <-data.frame(site.x=c("Nap","Nap","Nap","Nap","Mor","Mor","Mor","Jam","Jam","Shin"), 
+                        site.y=c("Mor","Jam","Shin","Mt","Jam","Shin","Mt","Shin","Mt","Mt"),
+                        Distance=c(0.18,0.1,0.32,0.32,0.12,0.18,0.16,0.25,0.28,0.73))
 
 
+mignei2 <- with(mig.Nei, Distance)
+nams <- with(mig.Nei, unique(c(as.character(site.x), as.character(site.y))))
+attributes(mignei2) <- with(mig.Nei, list(Size = length(nams),
+                                           Labels = nams,
+                                           Diag = FALSE,
+                                           Upper = FALSE,
+                                           method = "user"))
+mignei2
+class(mignei2) <- "dist"
+mignei2 
+library("car")
+Anova(lm(mignei2~Dgeo2))
+summary(lm(mignei2~Dgeo2))
+ibd3 <-mantel.randtest(mignei2,Dgeo2, nrepet=1000)
+ibd3
+plot(ibd3)
+
+#jost's D
+mig.j <-data.frame(site.x=c("Nap","Nap","Nap","Nap","Mor","Mor","Mor","Jam","Jam","Shin"), 
+                     site.y=c("Mor","Jam","Shin","Mt","Jam","Shin","Mt","Shin","Mt","Mt"),
+                     Distance=c(0.08,0.11,0.36,0.29,0.36,0.45,0.39,0.16,0.21,1.0))
+
+
+migj <- with(mig.j, Distance)
+nams <- with(mig.j, unique(c(as.character(site.x), as.character(site.y))))
+attributes(migj) <- with(mig.j, list(Size = length(nams),
+                                          Labels = nams,
+                                          Diag = FALSE,
+                                          Upper = FALSE,
+                                          method = "user"))
+
+migj
+class(migj) <- "dist"
+migj 
+library("car")
+Anova(lm(migj~Dgeo2))
+summary(lm(migj~Dgeo2))
+ibd4 <-mantel.randtest(migj,Dgeo2, nrepet=1000)
+ibd4
+plot(ibd4)
 
 ##### AMOVA #####
 #kevin said better to do AMOVA in Arlequin
