@@ -1017,22 +1017,30 @@ mig.j <-data.frame(site.x=c("Nap","Nap","Nap","Nap","Mor","Mor","Mor","Jam","Jam
                      site.y=c("Mor","Jam","Shin","Mt","Jam","Shin","Mt","Shin","Mt","Mt"),
                      Distance=c(0.08,0.11,0.36,0.29,0.36,0.45,0.39,0.16,0.21,1.0))
 
+mig.MIG <-data.frame(site.x=c("Nap","Nap","Nap","Nap","Mor","Mor","Mor","Jam","Jam","Shin"), 
+                     site.y=c("Mor","Jam","Shin","Mt","Jam","Shin","Mt","Shin","Mt","Mt"),
+                     Distance=c(1.02, 1.00, 1.02, 1.01, 1.03, 0.95, 0.96, 0.99, 0.99, 0.91))
 
-migj <- with(mig.j, Distance)
-nams <- with(mig.j, unique(c(as.character(site.x), as.character(site.y))))
-attributes(migj) <- with(mig.j, list(Size = length(nams),
+mig.MIG2 <-data.frame(site.x=c("Nap","Nap","Nap","Nap","Mor","Mor","Mor","Jam","Jam","Shin"), 
+                     site.y=c("Mor","Jam","Shin","Mt","Jam","Shin","Mt","Shin","Mt","Mt"),
+                     Distance=c(1.05, 1.05, 0.94, 1.12, 1, 0.96, 0.99, 0.98, 0.99, 0.92))
+
+
+migMIG <- with(mig.MIG2, Distance)
+nams <- with(mig.MIG2, unique(c(as.character(site.x), as.character(site.y))))
+attributes(migMIG) <- with(mig.MIG2, list(Size = length(nams),
                                           Labels = nams,
                                           Diag = FALSE,
                                           Upper = FALSE,
                                           method = "user"))
 
-migj
-class(migj) <- "dist"
-migj 
+migMIG
+class(migMIG) <- "dist"
+migMIG 
 library("car")
-Anova(lm(migj~Dgeo2))
-summary(lm(migj~Dgeo2))
-ibd4 <-mantel.randtest(migj,Dgeo2, nrepet=1000)
+Anova(lm(migMIG~Dgeo2))
+summary(lm(migMIG~Dgeo2))
+ibd4 <-mantel.randtest(migMIG,Dgeo2, nrepet=1000)
 ibd4
 plot(ibd4)
 

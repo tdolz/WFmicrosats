@@ -22,23 +22,30 @@ setwd("/Users//tdolan/Documents//R-Github//WFmicrosats")
 #toolpack
 sem <-function(x) sd(x)/sqrt(length(x))
 
-#data
-clust <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/colonyclust.csv", header = TRUE)
-halfs <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/colonyhalfsibs.csv", header = TRUE)
+#data - remember to change out the excel file
+## colonyclust.csv and colonyhalfsibs.csv are from the 0.5 version of probability of sampling
+## colonyclust1.csv and colonyhalfsibs1.csv are from the 0.1 version of probability of sampling
+## colonyclustobs.csv and colonyhalfsibsobs.csv are from the obs version of probability 
+  #where the prob males is 0.0085	and probability females is 0.018
+clust <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/colonyclust1.csv", header = TRUE)
+halfs <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/colonyhalfsibs1.csv", header = TRUE)
 wfpop4df <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept2020_doubl0ABC.csv", header = TRUE) #csv version 
 rel_mt <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/relmt.csv",header = TRUE)
 rel_shin <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/relshin.csv",header = TRUE)
 
 #join pop info to clusts 
 popinfo <-dplyr::select(wfpop4df, Ind, Pop) %>% separate(Pop, c("Ocean","Bay","Con","Year"), remove=FALSE)
+clust <- mutate(clust, Ind=as.factor(Ind))
 clust <-left_join(clust, popinfo, by=c("Ind","Bay"))
 
 #separate the runs
-clust17 <-filter(clust, run=="17clust") %>% dplyr::select(-run)
+clust17 <-filter(clust, run=="17clust") %>% dplyr::select(-run)  #only need it if using 0.5 clust
 clustHWE <-filter(clust, run =="HWEclust") %>% dplyr::select(-run)
 halfs17 <-filter(halfs, run =="17clust") %>% dplyr::select(-run)
 halfsHWE <-filter(halfs, run =="HWE") %>% dplyr::select(-run)
 #do this for 17 first
+clust17 <-clust #only need if using 0.1 clust
+halfs17 <-halfs #only need if using 0.1 clust
 
 #join pop info to clust
 wf.df <-mutate(popinfo,ind1=Ind,ind2=Ind) %>% unite(ConYear, Con, Year, remove=FALSE)
@@ -49,6 +56,7 @@ fam <-dplyr::rename(fam, ind2=Ind)
 clust17new <-dplyr::select(wf.df, -ind1, -ind2)
 #join clust & pop to halfsibs
 wf.df <-left_join(wf.df, fam, by=c("ind2")) %>% dplyr::rename(clust2=clust)
+halfs17 <-mutate(halfs17, ind1=as.factor(ind1), ind2=as.factor(ind2))
 hs <-left_join(halfs17,wf.df, by=c("ind1","Bay"))
 hs <-dplyr::rename(hs, Bay1=Bay,Con1=Con,Year1=Year, ConYear1 = ConYear)
 hs <-dplyr::select(hs,-ind2.y) %>% dplyr::rename(ind2 =ind2.x)
@@ -79,7 +87,7 @@ ggplot(Mt17, aes(ind1, ind2))+
   xlab("offspring 1")+ylab("offspring 2")+
   theme(axis.text = element_text(size = 5),axis.title = element_text(size =10),axis.text.x = element_text(angle = 90),
         panel.background = element_rect(fill = "white", colour = "black"),strip.text = element_text(colour = 'black', face="bold"))
-ggsave('Mtbubbles.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 8, height = 8)
+#ggsave('Mtbubbles.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 8, height = 8)
 
 
 #barplot count of family within conyear. 
@@ -97,7 +105,7 @@ Mtbb17 %>%
   theme(strip.background =element_rect(fill="white"),strip.text = element_text(colour = 'black', face="bold"),
         axis.text.y = element_text(size = 12),axis.text.x=element_text(size = 12),axis.title = element_text(size =12),
         panel.background = element_rect(fill = "white", colour = "black"))
-ggsave('Mtfam17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 4, height = 8)
+ggsave('Mtfam17_obs.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 4, height = 8)
 
 #fathers
 Mtdads <- ddply(Mtclust, ~father, summarize, countgroups= n_distinct(ConYear))
@@ -112,7 +120,7 @@ ggplot(aes(father, fill=countgroups))+
   theme(strip.background =element_rect(fill="white"),strip.text = element_text(colour = 'black', face="bold"),
         axis.text.y = element_text(size = 12),axis.text.x=element_text(size = 12),axis.title = element_text(size =12),
         panel.background = element_rect(fill = "white", colour = "black"))
-ggsave('Mtdads17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 4, height = 8)
+ggsave('Mtdads17_obs.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 4, height = 8)
 
 
 #mothers
@@ -128,7 +136,7 @@ Mtmom17 %>%
   theme(strip.background =element_rect(fill="white"),strip.text = element_text(colour = 'black', face="bold"),
         axis.text.y = element_text(size = 12),axis.text.x=element_text(size = 12),axis.title = element_text(size =12),
         panel.background = element_rect(fill = "white", colour = "black"))
-ggsave('Mtmoms17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 4, height = 8)
+ggsave('Mtmoms17_obs.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 4, height = 8)
 
 #compare families to relatedness
 #join relatedness info to colony info
@@ -143,8 +151,8 @@ sj <-left_join(sj2,sj, by=c("ind2.id"))
 siblings <-filter(sj, father1==father2 & mother1==mother2)
 
 
-
-
+mtparents <- c(Mtdads$countgroups,Mtmoms$countgroups)
+mean(mtparents)
 
 
 
@@ -165,7 +173,7 @@ ggplot(Shin17, aes(ind1, ind2))+
   #scale_color_brewer(palette ="Paired")+
   facet_grid(ConYear1~ConYear2, scales="free", drop=FALSE)+ #margins =TRUE is interesting. 
   xlab("offspring 1")+ylab("offspring 2")+
-  theme(axis.text = element_text(size = 5),axis.title = element_text(size =10),axis.text.x = element_text(angle = 90),
+  theme(axis.text = element_text(size = 12),axis.title = element_text(size =12),axis.text.x = element_text(angle = 90),
         panel.background = element_rect(fill = "white", colour = "black"),strip.text = element_text(colour = 'black', face="bold"))
 ggsave('Shibubbles.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 8, height = 8)
 
@@ -193,7 +201,7 @@ Shidad17 %>%
   facet_wrap(~ConYear, nrow=4)+
   xlab("father")+ylab("number of offspring")+
   theme(strip.background =element_rect(fill="white"),strip.text = element_text(colour = 'black', face="bold"),
-        axis.text.y = element_text(size = 10),axis.text.x=element_text(size = 5),axis.title = element_text(size =10),
+        axis.text.y = element_text(size = 12),axis.text.x=element_text(size = 12),axis.title = element_text(size =10),
         panel.background = element_rect(fill = "white", colour = "black"))
 ggsave('Shidads17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 4, height = 8)
 
