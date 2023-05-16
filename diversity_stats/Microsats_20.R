@@ -7,6 +7,7 @@
 ## population corrected for new cohort assignment
 ## based on the script "skreportdnaJAN_28_2020MATTITUCK.R"
 ## Only including analysis that is for the publication. No exploratory analysis. 
+## We started to update this in 5/15/23, but then decided to create another script that does it. 
 
 
 #install.packages(c("poppr", "mmod", "magrittr", "treemap"), repos = "http://cran.rstudio.com", dependencies = TRUE)
@@ -32,8 +33,8 @@ setwd("/Users//tdolan/Documents//R-Github//WFmicrosats")
 ##### Formating the dataset #####
 # We are going to use the doubl0 version. 
 ##### Formating the dataset #####
-wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept20204genalex_doubl0ABC.csv")
-wfpop4df <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept2020_doubl0ABC.csv", header = TRUE) #csv
+wfpop <- read.genalex("./data/popcorrect_17_sept20204genalex_doubl0ABC.csv")
+wfpop4df <-read.csv("./data/popcorrect_17_sept2020_doubl0ABC.csv", header = TRUE) #csv
 
 splitStrata(wfpop) <-~Ocean/Bay/Con/Year
 setPop(wfpop) <-~Bay
@@ -51,8 +52,8 @@ wfpop2CLEAN <- wfpop %>% missingno("geno", cutoff=0.0)
 setPop(wfpop2CLEAN) <-~Bay
 wfia.pair <-wfpop2CLEAN %>% clonecorrect(strata= ~Bay) %>% pair.ia(quiet=FALSE)
 wfia.pair <- seppop(wfpop2CLEAN) %>% lapply(pair.ia) #by bay!
-#ggsave("rawLD20.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
-#dev.off()
+ggsave("rawLD20.png", path="./diversity_stats/diversity_figs")
+dev.off()
 
 #create a second dataset that removes one loci in the WF27/WF33 pair 
 #also remove WF06 & WF32 due to null alllels, see null_checker script and "microsat record Sept2020.ppt" for details. 
@@ -71,8 +72,8 @@ wfpopLD <-wfpopLD %>% missingno("loci", cutoff=0.30) # removes loci where overal
 info_table(wfpopLD, plot = TRUE, scaled =FALSE)
 wfpopLD <- wfpopLD %>% missingno("geno", cutoff=0.25) # remove samples that are > 25% missing
 info_table(wfpopLD, plot = TRUE, scaled =FALSE)
-#ggsave("25percutinfotable16LD.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
-#dev.off()
+ggsave("25percutinfotable16LD.png", path="./diversity_stats/diversity_figs")
+dev.off()
 
 #HWE Heatmap#
 setPop(wfpopLD) <-~Ocean
@@ -80,7 +81,7 @@ hw.test(wfpopLD, B=1000) #permutation based
 hw.test(wfpop2CLEAN, B=1000)
 hw.test(wfpopLD, B=0) #analytical p value
 wfhwe.pop <- seppop(wfpopLD) %>% lapply(hw.test)
-write.csv(wfhwe.pop, file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/wfhwepop16.csv")
+write.csv(wfhwe.pop, file="./diversity_stats/diversity_output_files/wfhwepop16.csv")
 (wfhwe.mat <- sapply(wfhwe.pop, "[", i = TRUE, j = 3)) # Take the third column with all rows ---> output this for supplementary tables.
 wfhw.mc <-sapply(wfhwe.pop, "[", i = TRUE, j = 4) #the PR exact based on the Monte carlo test! ----> p.values on the hw.test
 wfhw.mc  # this is just the p values. 
@@ -89,14 +90,13 @@ newmat <- wfhwe.mat
 newmat[newmat > alpha] <- 1 #where the p value on the chi square is greater than 0.05, give it a 1.
 # so pink means zero, which means p < 0.05, which means out of HWE. 
 levelplot(t(newmat),scales=list(x=list(rot=90)))
-#ggsave("HWEtest16.png", path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs")
-#dev.off()
+ggsave("HWEtest16.png", path="./diversity_stats/diversity_figs")
+dev.off()
 
 #PopGenReport - Remember to turn this off. 
 #setPop(wfpopLD) <-~Bay
 #wf.gen <-genclone2genind(wfpopLD) 
 #popgenreport(wf.gen,mk.counts=TRUE,mk.locihz = TRUE, mk.fst=TRUE, mk.allele.dist=TRUE, mk.null.all=TRUE,mk.allel.rich = TRUE,mk.differ.stats = TRUE,path.pgr=getwd(),mk.Rcode=TRUE,mk.pdf=TRUE )
-
 
 
 ### Summary Data ####
@@ -136,7 +136,7 @@ ggplot(h4, aes(x = locus, y = Bay, fill=hexhobs)) +
   ylab("")+
   #theme_standard() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
-ggsave('hexhobsheat17.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
+ggsave('hexhobsheat17.png',path="./diversity_stats/diversity_figs", width = 10, height = 7)
 
 
 ###Summary stats from popgenreport. 

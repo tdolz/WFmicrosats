@@ -1,4 +1,6 @@
 #Created February 9, 2023 from script clusteringDAPC.R in order to figure out what we did last time. 
+#updated May 15, 2023
+
 
 ### Here, in this sheet we are trying to do the kmeans tuning. 
 ### in a second sheet we willcompare bays based on 2016 YOY alone
