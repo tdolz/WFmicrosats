@@ -1,5 +1,6 @@
 ### Genetic analysis Bays ###
 ## created 8-19-2020
+## 
 
 ## NOTES ##
 ## updated on Sept. 5, 2020, to include all loci but subset as needed. 
@@ -24,6 +25,7 @@ library("lattice")
 library("related")
 library("cowplot")
 library('readr')
+library("coin")
 library("reshape2")
 library("strataG")
 library("hierfstat")
@@ -34,6 +36,7 @@ library("data.table")
 
 #keeping everything in this folder
 setwd("/Users//tdolan/Documents//R-Github//WFmicrosats")
+
 
 ##### Formating the dataset #####
 # We are going to use the doubl0 version. 
@@ -102,7 +105,6 @@ dev.off()
 #setPop(wfpopLD) <-~Bay
 #wf.gen <-genclone2genind(wfpopLD) 
 #popgenreport(wf.gen,mk.counts=TRUE,mk.locihz = TRUE, mk.fst=TRUE, mk.allele.dist=TRUE, mk.null.all=TRUE,mk.allel.rich = TRUE,mk.differ.stats = TRUE,path.pgr=getwd(),mk.Rcode=TRUE,mk.pdf=TRUE )
-
 
 ### Summary Data ####
 setPop(wfpopLD) <-~Bay
@@ -518,15 +520,87 @@ pairs <- expand.grid(comp, comp) %>%
       gather(key = llocstats, value = GRP, 1:2) %>%
       dplyr::select(-llocstats)})
 
-# empty data frame for results
-results <- setNames(data.frame(matrix(ncol = 6, nrow = 0)), c("pop1", "pop2", "stat", "temp", "p.value", "test"))
+library("coin")
+### I tried for days to set this up in a double loop. It seems like the issue is that
+### you can't paste the column name into wilcoxsign_test to refer to it from the loop.
+### even if it's the exact same characters and type. So I am just going to repeat the 
+### code for each stat for now. I've wasted too much time on this. 
+
 n <- as.numeric(length(pairs))
 
-library("coin")
-
-### we could automate this to run over a list of comparisons but that would 
-# loop over pairs
+#NEI
+results_list <-list()
 for(p in 1:n){
+  #tryCatch({
+  pair <- pairs[[p]]$GRP
+  temp <- llocstats %>%
+    dplyr::filter(GRP %in% pair) %>%
+    mutate(GRP = ordered(GRP, levels = pair),
+           LOCUS = as.factor(LOCUS)) %>%
+    droplevels()
+  wilcox <- wilcoxsign_test(Ht ~ GRP | LOCUS,    ###### MUST REMEMBER TO CHANGE WHAT TEST YOU ARE DOING. 
+                            data = temp,zero.method = "Pratt")
+  df <- data.frame("pop1" = pair[1], 
+                   "pop2" = pair[2], 
+                   "stat" = as.numeric(wilcox@statistic@teststatistic), 
+                   "p-value" = as.numeric(pvalue(wilcox)),
+                   "test" = "Ht") 
+  #if(!is.null(df)){
+  results_list[[p]] <- df #}#, error=function(e){})
+}
+#results_list <-results_list[-which(sapply(results_list, is.null))]
+results_nei<-bind_rows(results_list)
+
+#Fis
+results_list <-list()
+for(p in 1:n){
+  #tryCatch({
+  pair <- pairs[[p]]$GRP
+  temp <- llocstats %>%
+    dplyr::filter(GRP %in% pair) %>%
+    mutate(GRP = ordered(GRP, levels = pair),
+           LOCUS = as.factor(LOCUS)) %>%
+    droplevels()
+  wilcox <- wilcoxsign_test(Fis ~ GRP | LOCUS,    ###### MUST REMEMBER TO CHANGE WHAT TEST YOU ARE DOING. 
+                            data = temp,zero.method = "Pratt")
+  df <- data.frame("pop1" = pair[1], 
+                   "pop2" = pair[2], 
+                   "stat" = as.numeric(wilcox@statistic@teststatistic), 
+                   "p-value" = as.numeric(pvalue(wilcox)),
+                   "test" = "Fis") 
+  #if(!is.null(df)){
+  results_list[[p]] <- df #}#, error=function(e){})
+}
+#results_list <-results_list[-which(sapply(results_list, is.null))]
+results_fis<-bind_rows(results_list)
+
+#EVENNESS
+results_list <-list()
+for(p in 1:n){
+  #tryCatch({
+  pair <- pairs[[p]]$GRP
+  temp <- llocstats %>%
+    dplyr::filter(GRP %in% pair) %>%
+    mutate(GRP = ordered(GRP, levels = pair),
+           LOCUS = as.factor(LOCUS)) %>%
+    droplevels()
+  wilcox <- wilcoxsign_test(EVENNESS ~ GRP | LOCUS,    ###### MUST REMEMBER TO CHANGE WHAT TEST YOU ARE DOING. 
+                            data = temp,zero.method = "Pratt")
+  df <- data.frame("pop1" = pair[1], 
+                   "pop2" = pair[2], 
+                   "stat" = as.numeric(wilcox@statistic@teststatistic), 
+                   "p-value" = as.numeric(pvalue(wilcox)),
+                   "test" = "EVENNESS") 
+  #if(!is.null(df)){
+  results_list[[p]] <- df #}#, error=function(e){})
+}
+#results_list <-results_list[-which(sapply(results_list, is.null))]
+results_even<-bind_rows(results_list)
+
+#SHANNON_IDX
+results_list <-list()
+for(p in 1:n){
+  #tryCatch({
   pair <- pairs[[p]]$GRP
   temp <- llocstats %>%
     dplyr::filter(GRP %in% pair) %>%
@@ -534,27 +608,24 @@ for(p in 1:n){
            LOCUS = as.factor(LOCUS)) %>%
     droplevels()
   wilcox <- wilcoxsign_test(SHANNON_IDX ~ GRP | LOCUS,    ###### MUST REMEMBER TO CHANGE WHAT TEST YOU ARE DOING. 
-                            data = temp,
-                            zero.method = "Pratt")
+                            data = temp,zero.method = "Pratt")
   df <- data.frame("pop1" = pair[1], 
                    "pop2" = pair[2], 
                    "stat" = as.numeric(wilcox@statistic@teststatistic), 
                    "p-value" = as.numeric(pvalue(wilcox)),
-                   "test" = "Shannon")  ### change this one. 
-  results <- bind_rows(results, df)}
+                   "test" = "SHANNON_IDX") 
+  #if(!is.null(df)){
+  results_list[[p]] <- df #}#, error=function(e){})
+}
+#results_list <-results_list[-which(sapply(results_list, is.null))]
+results_shannon<-bind_rows(results_list)
 
-#now change test and re_run above. 
-results_nei <-results
-results_fis <-results
-results_even <-results
-results_shannon <-results
-
+#combine
 results <-bind_rows(results_nei, results_fis, results_even, results_shannon)
-results <- results %>% dplyr::select(-temp)
+#results <- results %>% dplyr::select(-temp)
 results <-mutate(results, bonferroni=0.05/10) # number of pairwise comparisons ####CHECK THIS
 results <-mutate(results, significance = ifelse(p.value>=bonferroni,"not significant","significant"))
-
-write.csv(results,file="/Users/tdolan/Documents/WIP research/microsats/microsats_results/wilcox.csv" )
+write.csv(results,file="./diversity_stats/diversity_output_files/bay/wilcox.csv")
 
 #heatmap of results (new way)
 results <- mutate(results, starsig=ifelse(significance=="significant",round(p.value,4),NA),test.statistic=abs(stat))
@@ -581,7 +652,7 @@ results_nei %>%
   scale_color_manual(values=c("white","red"), guide=FALSE)+
   xlab("")+ylab("")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-#ggsave('neiBaytile17.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
+ggsave('neiBaytile17.png',path="./diversity_stats/diversity_figs/bay", width = 10, height = 7)
 
 #FIS heatmap
 #delete duplicate pairs to form the half grid of the heatmap. 
@@ -600,11 +671,11 @@ results_Fis %>%
   scale_color_manual(values=c("white","red"), guide=FALSE)+
   xlab("")+ylab("")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-#ggsave('FisBaytile17.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
+ggsave('FisBaytile17.png',path="./diversity_stats/diversity_figs/bay", width = 10, height = 7)
 
 #EVENNESS heatmap
 #delete duplicate pairs to form the half grid of the heatmap. 
-results_even <-filter(results, test=="Evenness") %>%
+results_even <-filter(results, test=="EVENNESS") %>%
   arrange(test.statistic) %>% unique() %>% 
   mutate(pair1 = pmin(pop1,pop2), pair2 =pmax(pop1,pop2)) %>% arrange(pair1)
 toDelete <- seq(1, nrow(results_even), 2)
@@ -619,11 +690,11 @@ results_even %>%
   scale_color_manual(values=c("white","red"), guide=FALSE)+
   xlab("")+ylab("")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-#ggsave('evennessBaytile17.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
+ggsave('evennessBaytile17.png',path="./diversity_stats/diversity_figs/bay", width = 10, height = 7)
 
 #shannons heatmap
 #delete duplicate pairs to form the half grid of the heatmap. 
-results_shannon <-filter(results, test=="Shannon") %>%
+results_shannon <-filter(results, test=="SHANNON_IDX") %>%
   arrange(test.statistic) %>% unique() %>% 
   mutate(pair1 = pmin(pop1,pop2), pair2 =pmax(pop1,pop2)) %>% arrange(pair1)
 toDelete <- seq(1, nrow(results_shannon), 2)
@@ -638,7 +709,7 @@ results_shannon %>%
   scale_color_manual(values=c("white","red"), guide=FALSE)+
   xlab("")+ylab("")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-#ggsave('shannonBaytile17.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
+ggsave('shannonBaytile17.png',path="./diversity_stats/diversity_figs/bay", width = 10, height = 7)
 
 
 ##Wilcoxon test for rarified alleles##
@@ -660,6 +731,7 @@ n <- as.numeric(length(pairs))
 
 library("coin")
 # loop over pairs
+results_ar <-list()
 for(p in 1:n){
   pair <- pairs[[p]]$variable
   temp <- meltar3 %>%
@@ -674,9 +746,8 @@ for(p in 1:n){
                    "pop2" = pair[2], 
                    "stat" = as.numeric(wilcox@statistic@teststatistic), 
                    "p-value" = as.numeric(pvalue(wilcox)))
-  results_ar <- bind_rows(results_ar, df)}
-
-
+  results_ar[[p]] <-df}
+  results_ar <- bind_rows(results_ar)
 
 results_ar <-mutate(results_ar, bonferroni=0.05/10)
 results_ar <-mutate(results_ar, significance = ifelse(p.value>=bonferroni,"not significant","significant")) %>% mutate(starsig=ifelse(significance=="significant",round(p.value,4),NA),test.statistic=abs(stat))
@@ -697,8 +768,7 @@ results_ar %>%
   scale_color_manual(values=c("white","red"), guide=FALSE)+
   xlab("")+ylab("")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-#ggsave('rariefied_allelesBaytile17.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
-
+ggsave('rariefied_allelesBaytile17.png',path="./diversity_stats/diversity_figs/bay", width = 10, height = 7)
 
 
 ##### FST ######
@@ -730,7 +800,7 @@ bayFST %>%
   #scale_color_manual(values=c("white","red"), guide=FALSE)+
   xlab("")+ylab("")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-ggsave('FSTBaytile17.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
+ggsave('FSTBaytile17.png',path="./diversity_stats/diversity_figs/bay", width = 7, height = 7)
 
 #see previous scripts for other kinds of FST you can calculate
 
@@ -762,7 +832,7 @@ ggplot(rel2, aes(x=pop,y=IR))+
   coord_flip()+ 
   #ylim(0.7,1.0)+
   xlab(' ')+ylab("IR")+theme_cowplot()+guides(fill = FALSE, colour = FALSE) 
-#ggsave('IRld.png', width = 7, height = 7)
+ggsave('IRld.png',path="./diversity_stats/diversity_figs/bay", width = 7, height = 7)
 
 rel2 <- arrange(rel2,pop)
 drabcolors2 <-c("#d0d1e6","#a6bddb", "#67a9cf", "#1c9099", "#016450")
@@ -776,7 +846,7 @@ rel2 %>%
   xlab(' ')+ylab("Internal Relatedness")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-#ggsave('rel_bay17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 5)
+ggsave('rel_bay17.png', path="./diversity_stats/diversity_figs/bay", width = 10, height = 5)
 
 
 
@@ -795,14 +865,7 @@ pivlocstats %>%
   facet_wrap(~variable, scales="free_x", nrow=2)+ 
   theme(axis.text = element_text(size = 10),axis.title = element_text(size = 12),panel.background = element_rect(fill = 'white', colour = 'black'),
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-#ggsave('pivlocstats17.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 12, height = 5)
-
-
-
-
-
-
-
+ggsave('pivlocstats17.png', path="./diversity_stats/diversity_figs/bay", width = 12, height = 5)
 
 
 # lets try testing for significant differences in mean IR for each bay pair with a wilcox sign test, idk why that's not ok... 
@@ -823,6 +886,7 @@ n <- as.numeric(length(pairs))
 
 library("coin")
 # loop over pairs
+results_ir <-list()
 for(p in 1:n){
   pair <- pairs[[p]]$name
   temp <- rel2 %>%
@@ -837,7 +901,8 @@ for(p in 1:n){
                    "pop2" = pair[2], 
                    "stat" = as.numeric(wilcox@statistic@teststatistic), 
                    "p-value" = as.numeric(pvalue(wilcox)))
-  results_ir <- bind_rows(results_ir, df)}
+  results_ir[[p]]<-df}
+  results_ir <- bind_rows(results_ir)
 #these p.values are too low. 
 
 #what about an anova followed by ls means? 
@@ -924,7 +989,7 @@ t %>%
   scale_color_manual(values=c("white","red"), guide=FALSE)+
   xlab("")+ylab("")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-#ggsave('IRBaytile17.png',path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 10, height = 7)
+ggsave('IRBaytile17.png',path="./diversity_stats/diversity_figs/bay", width = 10, height = 7)
 
 #### Genetic Distance ####
 
@@ -932,9 +997,11 @@ t %>%
 
 #all bays?
 set.seed(999)
+jpeg(file="./diversity_stats/diversity_figs/bay/provesti.jpeg")
 wfpopLD %>%
   genind2genpop(pop = ~Bay) %>%
   aboot(cutoff = 50, quiet = TRUE, sample = 1000, distance = provesti.dist, missingno="ignore")
+dev.off()
 #This one makes a lot of sense
 
 
@@ -978,13 +1045,19 @@ plot(ibd2)
 library("MASS")
 dens <- kde2d(Dgeo2,Dgen, n=300)
 myPal <- colorRampPalette(c("white","blue","gold", "orange", "red"))
+jpeg(file="./diversity_stats/diversity_figs/bay/IBDbysea.jpeg")
 plot(Dgeo2, Dgen, xlab="distance (KM)", ylim= c(0.12, 0.35),ylab="genetic distance (euclidean)")
-#image(dens, col=transp(myPal(500),0.4), add=TRUE)
+image(dens, col=transp(myPal(500),0.4), add=TRUE)
 abline(lm(Dgen~Dgeo2))
+dev.off()
 #strong looking pattern of IBD. 
 library("car")
 Anova(lm(Dgen~Dgeo2))
 summary(lm(Dgen~Dgeo2))
+
+######################################################### Not sure what's below this line #####################
+
+
 
 ###compare to migration rates?
 Dgeo2 #geographic distance matrix. 
