@@ -249,7 +249,7 @@ loc_stats <- left_join(loc_stats, loc_stats_2) %>%
   filter(LOCUS != "mean")
 
 loc_stats[is.na(loc_stats)] <- NA
-write.csv(loc_stats,file="./diversity_stats/diversity_output_files/loc_stats17.csv")
+write.csv(loc_stats,file="./diversity_stats/diversity_output_files/bay/loc_stats17.csv")
 pivlocstats <-pivot_longer(loc_stats,cols = c("N_ALLELES", "SIMPSON_IDX", "EVENNESS","Ho","Hs","Ht","Fis","SHANNON_IDX","STODD_TAYLOR_IDX"),
                              names_to="variable", values_to="value")
 sumlocstats <-ddply(pivlocstats, GRP~variable, summarize, meanvar=mean(value), sdvar=sd(value))

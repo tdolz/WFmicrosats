@@ -1,5 +1,5 @@
 ####FST comparisons ####### 
-#Nov 1, 2020
+#Nov 1, 2020, updated 5/29/23
 
 #install.packages(c("poppr", "mmod", "magrittr", "treemap"), repos = "http://cran.rstudio.com", dependencies = TRUE)
 library('plyr')
@@ -21,8 +21,8 @@ library("strataG")
 setwd("/Users//tdolan/Documents//R-Github//WFmicrosats")
 
 ##### Formating the dataset #####
-wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept20204genalex_doubl0ABC.csv")
-wfpop4df <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept2020_doubl0ABC.csv", header = TRUE) #csv
+wfpop <- read.genalex("./data/popcorrect_17_sept20204genalex_doubl0ABC.csv")
+wfpop4df <-read.csv("./data/popcorrect_17_sept2020_doubl0ABC.csv", header = TRUE) #csv
 
 splitStrata(wfpop) <-~Ocean/Bay/Con/Year
 setPop(wfpop) <-~Bay
@@ -65,6 +65,7 @@ popStruct.b
 mtres <- as.data.frame(popStruct.b$pairwise$result)
 mtres <-dplyr::select(mtres, strata.1,strata.2, Fst, Fst.p.val) %>% dplyr::rename(Pr.exact=Fst.p.val)
 mtres <-pradj(mtres)
+write.csv(mtres, file="./diversity_stats/diversity_output_files/bay/bay_fst_notrarified.csv")
 
 #BAY - CON Mattituck
 #explore structure within Mattituck
@@ -76,6 +77,7 @@ popStruct.M
 mtres <- as.data.frame(popStruct.M$pairwise$result)
 mtres <-dplyr::select(mtres, strata.1,strata.2, Fst, Fst.p.val) %>% dplyr::rename(Pr.exact=Fst.p.val)
 mtres <-pradj(mtres)
+write.csv(mtres, file="./diversity_stats/diversity_output_files/Mattituck/MT_fst_BayCon_notrarified.csv")
 
 #BAY/YEAR/CON Mattituck. 
 setPop(mtco) <-~Bay/Con/Year
@@ -86,6 +88,7 @@ popStruct.M
 mtres <- as.data.frame(popStruct.M$pairwise$result)
 mtres <-dplyr::select(mtres, strata.1,strata.2, Fst, Fst.p.val) %>% dplyr::rename(Pr.exact=Fst.p.val)
 mtres <-pradj(mtres)
+write.csv(mtres, file="./diversity_stats/diversity_output_files/Mattituck/MT_fst_BayConYEAR_notrarified.csv")
 
 #Shinnecock. 
 setPop(shinco) <-~Bay/Con/Year
@@ -102,3 +105,36 @@ popStruct.S
 mtres <- as.data.frame(popStruct.S$pairwise$result)
 mtres <-dplyr::select(mtres, strata.1,strata.2, Fst, Fst.p.val) %>% dplyr::rename(Pr.exact=Fst.p.val)
 mtres <-pradj(mtres)
+write.csv(mtres, file="./diversity_stats/diversity_output_files/Mattituck/SHIN_fst_BayConYEAR_notrarified.csv")
+
+#### The bays comparison where we do a rareifaction########## 
+setPop(wfpopLD) <-~Bay/Year
+#remove all individuals that aren't 2016 YOY
+yoy16 <-popsub(wfpopLD, exclude=c("Mt_2015","Mt_adults","Shin_2017"))
+setPop(yoy16) <-~Bay
+#convert to a df. 
+df <-genind2df(yoy16, usepop = TRUE, oneColPerAll = TRUE) 
+df$Ind <- rownames(df)
+df <-df[,c(36,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35)]
+df[df=="NA"] <- 0 # missing data must be 0
+
+#randomly sample from within shinnecock and mattituck 100x
+rare.out <-list()
+for(i in 1:2){
+  df.split <-split(df, df$pop)
+  new.shin <-sample_n(df.split$Shin,30)
+  new.mt <-sample_n(df.split$Mt,30)
+  rare.bays <-bind_rows(new.shin,new.mt,df.split$Jam,df.split$Mor,df.split$Nap)
+  wf.rare <-df2gtypes(rare.bays,ploidy=2)
+  popStruct.b <- popStructTest(wf.rare, nrep = 1000, quietly = TRUE) 
+  mtres <- as.data.frame(popStruct.b$pairwise$result)
+  mtres <-dplyr::select(mtres, strata.1,strata.2, Fst, Fst.p.val) %>% dplyr::rename(Pr.exact=Fst.p.val)%>%
+    mutate(count=i)
+  #mtres <-pradj(mtres) #don't need to do this yet.
+  rare.out[[i]]<-mtres
+}
+
+mean.fst <-bind_rows(rare.out)%>%group_by(strata.1,strata.2)%>%
+  summarize(mean.fst=mean(Fst), sd.fst=sd(Fst), mean.pval=mean(Pr.exact), sd.pval=sd(Pr.exact),.groups="keep")
+  # i don't actually think you can combine the pval this way, but let's calculate them anyway. 
+write.csv(mean.fst, file="./diversity_stats/diversity_output_files/YOY16_bay/bay16_fst_rarified.csv")
