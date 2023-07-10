@@ -1,0 +1,92 @@
+catch.date,TL,FishID,Acoustic Tag SN,Fin Clip,Underside,Scales,repro,Notes
+2015-03-12,365,22365,1204889,Yes,,Yes,gravid,gravid
+2015-03-12,402,22377,1204901,Yes,,No,spent,spent
+2015-03-16,420,22364,1204888,Yes,,No,,"possible male, didn't look gravid or spent, dorsal damaged"
+2015-03-24,394,22386,1204910,Yes,smooth,No,,"possible male, didn't look gravid or spent, dorsal damaged, took a little longer for surgery"
+2015-04-02,415,22371,1204895,Yes,smooth,No,,"CHRIS, not gravid"
+2015-04-02,436,22370,1204894,Yes,rough,No,,"not gravid, little clip out of back dorsal"
+2015-04-02,395,22363,1204887,Yes,smooth,No,,"not gravid, bled a little"
+2015-04-02,390,22362,1204886,Yes,rough,No,,
+2015-04-02,451,22369,1204893,Yes,,No,spent,"female, skinny, possibly spent"
+2015-04-15,415,22385,1204909,Yes,smooth,No,,
+2015-04-15,393,22384,1204908,Yes,rough,No,,very slimey
+2015-04-15,446,22376,1204900,Yes,smooth,No,,
+2015-04-16,187,NA,NA,NA,smooth,No,,
+2015-04-16,341,22361,1204885,Yes,smooth,Yes,,
+2015-04-23,341,22360,1204884,Yes,smooth,Yes,,bled a little bit
+2015-04-23,405,22368,1204892,Yes,smooth,Yes,,"bleeder!, notch out of fin"
+2015-04-23,199,NA,NA,Yes,,Yes,,
+2015-04-23,364,22367,1204891,Yes,rough,Yes,,probably a male
+2015-04-23,389,22366,1204890,Yes,rough,Yes,,yellow coloring (gills and fins)
+2015-04-23,293,22375,1204899,Yes,smooth,Yes,,
+2015-04-23,115,NA,NA,Yes,,No,,
+2015-04-23,431,22374,1204898,Yes,Smooth,Yes,,"bled with floy tag, dropped off by MIMS, slow sinker/lethargic"
+2015-04-28,457,22373,1204897,Yes,smooth,Yes,,spent
+2015-04-28,332,22372,1204896,Yes,rough,Yes,,slower to sink
+2015-04-28,396,22383,1204907,Yes,smooth,Yes,,
+2015-04-28,394,22382,1204906,Yes,rough,Yes,,
+2015-04-28,407,22381,1204905,Yes,smooth,Yes,,
+2015-04-28,440,22379,1204903,Yes,smooth,Yes,,rasied bump on ventral side
+2015-04-28,429,22380,1204904,Yes,smooth,Yes,,
+2015-04-28,417,22378,1204902,Yes,rough,Yes,,damaged operculum 
+2015-06-09,209,NA,NA,Yes,,Yes,,
+2015-06-09,195,NA,NA,Yes,smooth,Yes,gravid,possibly gravid
+2015-06-09,247,9779,1159489,Yes,smooth,Yes,,"huge slit in tail, white spots on dorsal side"
+2015-06-09,163,NA,NA,Yes,,Yes,,
+2015-06-09,169,NA,NA,Yes,smooth,Yes,,
+2015-12-21,130,NA,NA,No,smooth,No,,
+2015-12-21,369,57388,1220275,Yes,smooth,Yes,gravid,"probably gravid, red circle underside (~3 from peduncle)"
+2015-12-21,147,NA,NA,Yes,,No,,
+2015-12-21,118,NA,NA,Yes,smooth,No,,
+2015-12-21,436,57387,1220274,Yes,smooth,Yes,gravid,probably gravid
+2016-01-07,299,57386,1220273,Yes,Smooth,Yes,gravid,"probably gravid, bled"
+2016-01-07,124,NA,NA,Yes,Smooth,Yes,,
+2016-01-07,153,NA,NA,Yes,Smooth,Yes,,
+2016-01-07,139,NA,NA,Yes,Smooth,Yes,,
+2016-01-08,473,57385,1220272,Yes,Rough,Yes,gravid,gravid
+2016-01-12,179,NA,NA,Yes,Smooth,Yes,,
+2016-01-12,286,57384,1220271,Yes,Smooth,Yes,gravid,"probably gravid, bled"
+2016-01-20,162,NA,NA,Yes,Smooth,Yes,,
+2016-01-21,374,57383,1220270,Yes,Smooth,Yes,gravid,gravid
+2016-01-21,458,57382,1220269,Yes,Smooth,Yes,gravid,gravid
+2106-01-21,295,57375,1220262,Yes,Rough,Yes,milt,male milting on board
+2016-01-25,321,57376,1220263,Yes,Smooth,Yes,gravid,"gravid, white bump on dorsal side"
+2016-01-27,219,NA,NA,Yes,Smooth,Yes,,
+2016-01-27,394,57377,1220264,Yes,Rough,Yes,milt,"RECAP of 22382, tag stopped working. Male milting "
+2016-01-27,345,57378,1220265,Yes,Smooth,Yes,gravid,gravid
+2016-01-27,372,57379,1220266,Yes,Rough,Yes,gravid,gravid
+2016-01-27,440,57380,1220267,Yes,Smooth,Yes,gravid,gravid
+2016-01-27,442,57381,1220268,Yes,Smooth,Yes,gravid,"gravid, 3 sutures"
+2016-02-03,319,55274,1231174,Yes,Smooth,Yes,gravid,gravid
+2016-02-03,265,55279,1231179,Yes,Smooth,Yes,,"puss like substance once cut, went out of the southern most finger"
+2016-02-03,284,55278,1231178,Yes,Smooth,Yes,,
+2016-02-03,383,2260,1231207,Yes,Rough,Yes,milt,"milting, skinnier male"
+2016-02-03,433,2256,1231203,Yes,Rough,Yes,,brown pigmentation on underside
+2016-02-03,424,2255,1231202,Yes,Rough,Yes,milt,"gravid, milting"
+2016-02-03,298,55277,1231177,Yes,Rough,Yes,,"no floy, stabbed it three times with no luck"
+2016-02-03,422,2254,1231201,Yes,Smooth,Yes,gravid,"very gravid, pigmentation dorsal"
+2016-02-03,311,2258,1231205,Yes,Smooth,Yes,,probably gravid
+2016-02-22,300,55275,1231175,Yes,Rough,Yes,,
+2016-02-22,355,2253,1231200,Yes,Smooth,Yes,gravid,"gravid, bleeder"
+2016-02-22,440,2259,1231206,Yes,Smooth,Yes,spent,"spent, yellow pigmentation around gills"
+2016-02-22,465,2261,1231208,Yes,Rough,Yes,spent,"spent, gave benadine"
+2016-02-22,412,2257,1231204,Yes,Smooth,Yes,spent,spent
+2016-02-22,280,55276,12311761,Yes,Smooth,Yes,gravid,"gravid, opened up right by eggs"
+2016-02-26,257,2264,1231211,Yes,Smooth,Yes,,
+2016-02-26,420,2262,1231209,Yes,Rough,Yes,spent,"spent, bled from floy tag"
+2016-02-26,270,2268,1231215,Yes,Rough,Yes,,
+2016-02-26,270,2263,1231210,Yes,Rough,Yes,gravid,"probably gravid, milting"
+2016-02-26,362,2267,1231214,Yes,Rough,Yes,,"milting when cut open, scales very raised up/very rough on dorsal side."
+2016-03-03,398,2270,1231217,Yes,Smooth,Yes,spent,probably spent
+2016-03-03,432,2266,1231213,Yes,Smooth,Yes,spent,"probably spent, already another fin clip taken opposite I take from"
+2016-03-03,406,2265,1231212,Yes,Rough,Yes,milt,milting
+2016-03-03,395,2269,1231216,Yes,Rough,Yes,milt,milting
+2016-03-30,382,9789,1159499,Yes,Smooth,Yes,gravid,"probably gravid, thick"
+2016-03-30,340,9783,1159493,Yes,Smooth,Yes,gravid,"probably gravid, thick"
+2016-03-30,328,9788,1159498,Yes,Smooth,Yes,,
+2016-03-30,312,9778,1159488,Yes,Smooth,Yes,,lap tow
+2016-03-30,305,16150,1187508,Yes,Rough,Yes,,"lap tow, bled, V-8 tag"
+2016-03-30,268,16149,1187507,Yes,Rough,Yes,gravid,"lap tow, possibly gravid, V-8 tag"
+2016-03-30,251,NA,NA,Yes,Rough,Yes,,
+2016-06-30,206,NA,NA,No,NA,No,,
+2016-07-11,255,NA,NA,Yes,Smooth,No,,

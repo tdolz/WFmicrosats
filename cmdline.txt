@@ -1,8 +1,0 @@
-Genepop
-GenepopInputFile=/Users//tdolan/Documents//R-Github//WFmicrosats/wfgp
-MenuOptions=8:1
-NullAlleleMethod=
-CIcoverage=0.95
-RandomSeed=67144630
-Mode=Batch
-
