@@ -6,7 +6,6 @@
 
 #install.packages(c("poppr", "mmod", "magrittr", "treemap"), repos = "http://cran.rstudio.com", dependencies = TRUE)
 library("tidyverse")
-library('plyr')
 library("dplyr")
 library("poppr")
 library("tidyr")
@@ -97,7 +96,7 @@ df[df=="NA"] <- 0 # missing data must be 0
 
 #randomly sample from within shinnecock and mattituck 100x
 rare.out <-list()
-for(i in 1:2){
+for(i in 1:100){
   df.split <-split(df, df$pop)
   new.shin <-sample_n(df.split$Shin,30)
   new.mt <-sample_n(df.split$Mt,30)
@@ -126,10 +125,12 @@ for(i in 1:2){
   rare.out[[i]]<-h4
 }
 
-mean.h4 <-bind_rows(rare.out)%>%group_by(locus,Bay)%>%
-  summarize(mean.hexp=mean(hexp), sd.hexp=sd(hexp),
+mean.h4 <-bind_rows(rare.out)%>%
+  mutate(locus=as.factor(locus), Bay=as.factor(Bay))%>%
+  group_by(locus,Bay)%>%
+  dplyr::summarize(mean.hexp=mean(hexp), sd.hexp=sd(hexp),
             mean.hobs=mean(hobs), sd.hobs=sd(hobs),
-            mean.hexhobs=mean(hexhobs), sd.hexhobs=sd(hexhobs),.groups="keep")
+            mean.hexhobs=mean(hexhobs), sd.hexhobs=sd(hexhobs),.groups="drop")
 write.csv(mean.h4, file="./diversity_stats/diversity_output_files/YOY16_bay/exp_obs_heterozygosity.csv")
 
 #heatmap of observed minus expected. 
