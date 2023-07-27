@@ -42,7 +42,7 @@ setPop(wfpop) <-~Bay
 ## Data cleanup. For details see datacleanup_comparison.R ##
 wfpopLD <-genclone2genind(wfpop)
 all_loci <- locNames(wfpopLD)
-removeloc <- c("WF06","WF27")# we also may want to remove A441 and WF32 for missing data reasons. 
+removeloc <- c("WF06","WF27", "WF32")# we also may want to remove A441 and WF32 for missing data reasons. 
 #especially WF32 because it's 70% missing in moriches and is out of HWE.
 #Come back to this
 keeploc <- setdiff(all_loci, removeloc)
@@ -94,6 +94,7 @@ df$Ind <- rownames(df)
 df <-df[,c(ncol(df),1:(ncol(df)-1))]
 df[df=="NA"] <- 0 # missing data must be 0
 
+########### RAREIFICATION LOOP 1 ###########################
 #randomly sample from within shinnecock and mattituck 100x
 rare.out <-list()
 for(i in 1:100){
@@ -124,6 +125,7 @@ for(i in 1:100){
   h4 <- bind_rows(naph, morh, Mth, jamh, shinh)%>%mutate(count=i)
   rare.out[[i]]<-h4
 }
+########### END RAREIFICATION LOOP 1 ###########################
 
 mean.h4 <-bind_rows(rare.out)%>%
   mutate(locus=as.factor(locus), Bay=as.factor(Bay))%>%
@@ -131,7 +133,9 @@ mean.h4 <-bind_rows(rare.out)%>%
   dplyr::summarize(mean.hexp=mean(hexp), sd.hexp=sd(hexp),
             mean.hobs=mean(hobs), sd.hobs=sd(hobs),
             mean.hexhobs=mean(hexhobs), sd.hexhobs=sd(hexhobs),.groups="drop")
-write.csv(mean.h4, file="./diversity_stats/diversity_output_files/YOY16_bay/exp_obs_heterozygosity.csv")
+write.csv(mean.h4, file="./diversity_stats/diversity_output_files/YOY16_bay/exp_obs_heterozygosity_noWF32.csv")
+#write.csv(mean.h4, file="./diversity_stats/diversity_output_files/YOY16_bay/exp_obs_heterozygosity.csv")
+
 
 #heatmap of observed minus expected. 
 ggplot(mean.h4, aes(x = locus, y = Bay, fill=mean.hexhobs)) +
@@ -142,7 +146,8 @@ ggplot(mean.h4, aes(x = locus, y = Bay, fill=mean.hexhobs)) +
   ylab("")+
   #theme_standard() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
-ggsave('hexhobsheat17.png',path="./diversity_stats/diversity_figs/YOY16_rare", width = 10, height = 7)
+#ggsave('hexhobsheat17.png',path="./diversity_stats/diversity_figs/YOY16_rare", width = 10, height = 7)
+ggsave('hexhobsheat17.png',path="./diversity_stats/diversity_figs/YOY16_rare_noWF32", width = 10, height = 7)
 
 
 ##### Shannon's summary stats ########
@@ -163,11 +168,13 @@ SampleInfo <- separate(SampleInfo, pop, c("Bay","Con","Year"))
 SampleInfo <-mutate(SampleInfo, Ocean="Atl")
 SampleInfo <-SampleInfo[,c(1,5,2,3,4)]
 
-##I think the easiest way to do this would be to do the rareifaction at this level and then feed it to the 
-##other functions. 
 
+########### RAREIFICATION LOOP 2 ###########################
+
+grp_sumlocstats <-list()
+grp_locstats <-list()
 gen_grp <-list()
-for (j in 1:10){
+for (j in 1:100){
 
 setPop(wfpopLD.og)<-~Ocean #the ocean should be all individuals - do not rareify?. 
 gen_oce <-seppop(wfpopLD.og)
@@ -224,8 +231,7 @@ gen_year <- seppop(wfpopLD)
 setPop(wfpopLD)<-~Bay/Year
 gen_bayyear <- seppop(wfpopLD)
 
-########## HERE DECIDE WHETHER TO USE ONLY 2016 YOY FOR THE BAY LEVEL #############
-########## On this version of the sheet we are using ONLY 2016 YOY FOR THE BAY LEVEL ############
+### On this version of the sheet we are using ONLY 2016 YOY FOR THE BAY LEVEL#####
 
 gen_grp <-c(gen_oce,
             gen_bay,
@@ -233,8 +239,6 @@ gen_grp <-c(gen_oce,
             gen_bayconyear,
             gen_year)
 gen_grp[["ALL"]] <-wfpopLD
-
-}
 
 
 # calculate allelic richness/diversity stats ====
@@ -282,23 +286,49 @@ loc_stats_2 <- plyr::ldply(loc_stats_2, data.frame) %>%
 
 loc_stats <- left_join(loc_stats, loc_stats_2) %>%
   dplyr::select(GRP, LOCUS, N_ALLELES, EVENNESS, Ho, Hs, Ht, Fis, SHANNON_IDX, SIMPSON_IDX, STODD_TAYLOR_IDX) %>%
-  filter(LOCUS != "mean")
+  filter(LOCUS != "mean")%>%
+  mutate(iter=j)
 
 loc_stats[is.na(loc_stats)] <- NA
-write.csv(loc_stats,file="./diversity_stats/diversity_output_files/YOY16_rare/loc_stats17.csv")
 pivlocstats <-pivot_longer(loc_stats,cols = c("N_ALLELES", "SIMPSON_IDX", "EVENNESS","Ho","Hs","Ht","Fis","SHANNON_IDX","STODD_TAYLOR_IDX"),
                              names_to="variable", values_to="value")
-sumlocstats <-ddply(pivlocstats, GRP~variable, summarize, meanvar=mean(value), sdvar=sd(value))
-write.csv(sumlocstats,file="./diversity_stats/diversity_output_files/YOY16_rare/sumlocstats17.csv")
+sumlocstats <-pivlocstats%>% group_by(GRP,variable)%>%summarize(meanvar=mean(value), sdvar=sd(value),.groups="drop")%>%
+  mutate(iter=j, var=sdvar^2)
 
-allcolors <-c("grey","#d0d1e6","#a6bddb","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#1c9099","#016450","#016450","#016450","#016450","#016450")
+grp_sumlocstats[[j]] <-sumlocstats
+grp_locstats[[j]] <-loc_stats
+}
+########### END RAREIFICATION LOOP 2 #########################################################
+#our output from this loop is a list of dataframes. Now we need to combine the dataframes by averaging the averages. 
 
+grp_sumlocstats <-bind_rows(grp_sumlocstats)
+grp_locstats <-bind_rows(grp_locstats)
+
+sumlocstats_mean <-grp_sumlocstats %>% group_by(GRP, variable) %>% 
+  summarize(av_meanvar = mean(meanvar), av_sd =sqrt(sum(var)/n_distinct(grp_sumlocstats$iter)), .groups="drop")
+
+locstats_mean <-grp_locstats%>%group_by(GRP,LOCUS)%>% 
+  summarize(N_ALLELES=mean(N_ALLELES),EVENNESS=mean(EVENNESS), Ho=mean(Ho), Hs=mean(Hs),Ht=mean(Ht),Fis=mean(Fis),
+            SHANNON_IDX=mean(SHANNON_IDX), SIMPSON_IDX=mean(SIMPSON_IDX), STODD_TAYLOR_IDX=mean(STODD_TAYLOR_IDX),.groups="drop")
+
+write.csv(locstats_mean,file="./diversity_stats/diversity_output_files/YOY16_rare/mean_loc_stats17.csv")
+write.csv(sumlocstats_mean,file="./diversity_stats/diversity_output_files/YOY16_rare/mean_sumlocstats17.csv")
+
+
+###plot it
+allcolors <-c("ALL"="grey","Atl"="grey","Jam"="#d0d1e6","Jam_6"="#d0d1e6","Mor"="#a6bddb","Mor_6"="#a6bddb",
+              
+              "#a6bddb","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#1c9099","#016450","#016450","#016450","#016450","#016450")
+
+#new piv
+pivlocstats <-pivot_longer(locstats_mean,cols = c("N_ALLELES", "SIMPSON_IDX", "EVENNESS","Ho","Hs","Ht","Fis","SHANNON_IDX","STODD_TAYLOR_IDX"),
+                           names_to="variable", values_to="value")
 
 #Giant barplot
 pivlocstats %>%
   mutate(GRP=as.factor(GRP)) %>%
   filter(variable %in% c("N_ALLELES", "SIMPSON_IDX", "EVENNESS","Ho","Hs","Ht","Fis")) %>%
-  filter(GRP %in% c("Atl","Nap","Mor","Jam","Shin","Shin_1_2016","Shin_2_2016","Shin_1_2017","Shin_2_2017","Mt","Mt_3","Mt_4","Mt_1_2015","Mt_2_2015","Mt_1_2016","Mt_2_2016"))%>%
+  #filter(GRP %in% c("Atl","Nap","Mor","Jam","Shin","Shin_1_2016","Shin_2_2016","Shin_1_2017","Shin_2_2017","Mt","Mt_3","Mt_4","Mt_1_2015","Mt_2_2015","Mt_1_2016","Mt_2_2016"))%>%
   ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
   geom_boxplot(aes(fill=GRP))+ 
   scale_fill_manual(name = "GRP",values = allcolors)+
