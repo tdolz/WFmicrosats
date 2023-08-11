@@ -24,6 +24,7 @@ library("hierfstat")
 library("viridis")
 library("forcats")
 library("data.table")
+library("poolr") #for fisher test, might get rid. 
 
 
 #keeping everything in this folder
@@ -627,6 +628,8 @@ fdata <-split(fdata, fdata$iter)
 #turn the friedman's tests into a function.
 #####Start function########### 
 
+fri_test <-function(fdata){
+  #df = unname(fdata)
 #####Friedman's test for Global heterogeneity#####
 a<-friedman.test(Hs~GRP | LOCUS, data= fdata) #Hs - fixing this. 
 b<-friedman.test(EVENNESS~GRP | LOCUS, data= fdata) #evenness
@@ -641,9 +644,39 @@ p.vals <-c(a$p.value, b$p.value,c$p.value,d$p.value,e$p.value,f$p.value,g$p.valu
 comparisons <-c(a$data.name,b$data.name,c$data.name,d$data.name,e$data.name,f$data.name,g$data.name)
 
 friedmans_tests <-cbind(comparisons, p.vals)%>%as.data.frame
+}
+
 #### END FUNCTION #####
 
-write.csv(friedmans_tests,"./diversity_stats/diversity_output_files/YOY16_rare/friedmanstests.csv")
+#Apply the function to df in the list#
+fri_grp <- fdata %>% lapply(fri_test)
+fri_grp <-bind_rows(fri_grp, .id="iter")
+#save raw values
+write.csv(fri_grp,"./diversity_stats/diversity_output_files/YOY16_rare/friedmanstests_raw.csv")
+
+#apply the fisher test to the comparisons.
+# we will do bonferroni as well just to be safe.  
+fisher <-mutate(fri_grp, p.vals=as.numeric(p.vals))%>%
+                  split(fri_grp$comparisons)
+fisher_p <-list()
+fisher_pvals <-c()
+bonferroni_pvals <-c()
+stouffer_pvals <-c()
+for (i in 1:length(fisher)){
+  df <-fisher[[i]]
+  fisher_p[[i]] <-fisher(df$p.vals, adjust="none")
+  fisher_pvals[i]<-fisher_p[[i]]$p
+  bp <-bonferroni(df$p.vals, adjust="none")
+  bonferroni_pvals[i]<-bp$p
+  sp <-stouffer(df$p.vals, adjust="none")
+  stouffer_pvals[i]<-sp$p
+}
+names(fisher_p)<-names(fisher)
+fisher_pvals<-data.table(fisher_pvals,bonferroni_pvals,stouffer_pvals, comparison=names(fisher))
+#However, this fisher test is for independent tests which these are not. 
+
+write.csv(fisher_pvals,"./diversity_stats/diversity_output_files/YOY16_rare/friedmanstests_adjustpval.csv")
+
 
 #######Wilcoxon tests #####
 #tell us which groups are significantly different. 
@@ -655,8 +688,13 @@ write.csv(friedmans_tests,"./diversity_stats/diversity_output_files/YOY16_rare/f
     #loc_stats_shin <- bay year con shin
     #loc_stats_16 <- 2016 YOY at bay level. 
 
-llocstats <- loc_stats_bay ## This IS 2016 yoy at bay level because we previously removed the other groups. 
+#from before, fdata is the list of df of loc_stats_bay
+#llocstats <- loc_stats_bay ## This IS 2016 yoy at bay level because we previously removed the other groups. 
 #list of all the different possible pairs
+
+
+##################### START WILCOXON FUNCTION #######################################
+w_test <-function(llocstats){
 comp <- as.character(unique(llocstats$GRP))  
 pairs <- expand.grid(comp, comp) %>%
   filter(!Var1 == Var2) %>%
@@ -770,6 +808,44 @@ results_shannon<-bind_rows(results_list)
 
 #combine
 results <-bind_rows(results_nei, results_fis, results_even, results_shannon)
+}
+############# END WILCOXON FUNCTION ####################################
+
+##Apply wilcoxon function
+
+wil_test <- fdata%>% lapply(w_test)
+
+wil_df <-bind_rows(wil_test, .id="iter")
+#save raw values
+write.csv(wil_df,"./diversity_stats/diversity_output_files/YOY16_rare/wilcoxontests_raw.csv")
+
+#apply the fisher test to the comparisons.
+# we will do bonferroni as well just to be safe.  
+fisher_p <-list()
+fisher_pvals <-c()
+bonferroni_pvals <-c()
+stouffer_pvals <-c()
+for (i in 1:length(wil_test)){
+  df <-wil_test[[i]]
+  fisher_p[[i]] <-fisher(df$p.value, adjust="none")
+  fisher_pvals[i]<-fisher_p[[i]]$p
+  bp <-bonferroni(df$p.value, adjust="none")
+  bonferroni_pvals[i]<-bp$p
+  sp <-stouffer(df$p.value, adjust="none")
+  stouffer_pvals[i]<-sp$p
+}
+wilcoxon_fisher_pvals<-data.table(fisher_pvals,bonferroni_pvals,stouffer_pvals)
+#However, this fisher test is for independent tests which these are not. 
+
+########################## stopped here 8/11/23 ############
+# the problem is we have to combine the pvalues by comparison, here right now the pvals are disagregated. 
+
+
+
+
+
+
+
 #results <- results %>% dplyr::select(-temp)
 results <-mutate(results, bonferroni=0.05/10) # number of pairwise comparisons ####CHECK THIS
 results <-mutate(results, significance = ifelse(p.value>=bonferroni,"not significant","significant"))
