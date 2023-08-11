@@ -147,7 +147,7 @@ ggplot(mean.h4, aes(x = locus, y = Bay, fill=mean.hexhobs)) +
   #theme_standard() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
 #ggsave('hexhobsheat17.png',path="./diversity_stats/diversity_figs/YOY16_rare", width = 10, height = 7)
-ggsave('hexhobsheat17.png',path="./diversity_stats/diversity_figs/YOY16_rare_noWF32", width = 10, height = 7)
+ggsave('hexhobsheat17.png',path="./diversity_stats/diversity_figs/YOY16_rare", width = 10, height = 7)
 
 
 ##### Shannon's summary stats ########
@@ -317,8 +317,9 @@ write.csv(sumlocstats_mean,file="./diversity_stats/diversity_output_files/YOY16_
 
 ###plot it
 allcolors <-c("ALL"="grey","Atl"="grey","Jam"="#d0d1e6","Jam_6"="#d0d1e6","Mor"="#a6bddb","Mor_6"="#a6bddb",
-              
-              "#a6bddb","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#1c9099","#016450","#016450","#016450","#016450","#016450")
+              "Mt"="#67a9cf","Mt_1"="#67a9cf","Mt_2"="#67a9cf","Mt_3"="#67a9cf","Mt_4"="#67a9cf", "Mt_5"="#67a9cf",
+              "Nap"="#1c9099","Nap_6"="#1c9099","Shin"="#016450","Shin_1"="#016450","Shin_2"="#016450")
+            
 
 #new piv
 pivlocstats <-pivot_longer(locstats_mean,cols = c("N_ALLELES", "SIMPSON_IDX", "EVENNESS","Ho","Hs","Ht","Fis","SHANNON_IDX","STODD_TAYLOR_IDX"),
@@ -339,40 +340,24 @@ pivlocstats %>%
 ggsave('pivlocstats17.png', path="./diversity_stats/diversity_figs/YOY16_rare", width = 12, height = 5)
 
 #create different loc stats groups for testing. 
-loc_stats_bay <-filter(loc_stats, GRP %in% c("Nap","Mor","Jam","Shin","Mt"))
+loc_stats_bay <-filter(locstats_mean, GRP %in% c("Nap","Mor","Jam","Shin","Mt"))
 
 #bay melt
 meltlocstats_bay <-pivot_longer(loc_stats_bay,cols = c("N_ALLELES", "SIMPSON_IDX", "EVENNESS","Ho","Hs","Ht","Fis","SHANNON_IDX","STODD_TAYLOR_IDX"),
                                 names_to="variable", values_to="value")
 
 
-meltlocstats2 <-filter(loc_stats, GRP %in% c("Nap","Mor","Jam","Shin","Mt","ALL"))%>%
+meltlocstats2 <-filter(locstats_mean, GRP %in% c("Nap","Mor","Jam","Shin","Mt","ALL"))%>%
   pivot_longer(cols = c("N_ALLELES", "SIMPSON_IDX", "EVENNESS","Ho","Hs","Ht","Fis","SHANNON_IDX","STODD_TAYLOR_IDX"),
                names_to="variable", values_to="value")
 #this is essentially by bay but also includes the "ALL" Group
 
-
-#we have some reason to distrust the fact that ht and hs are the same after shannons code but not globally. so we will also do this another way.
-#if you look at this, basic stats does not work at the subpopulation level and this could be why. 
-g2h_all <-genind2hierfstat(wfpopLD)
-g2hall <-basic.stats(g2h_all)
-global <-as.data.frame(g2hall$perloc) %>% tibble::rownames_to_column("locus") %>% mutate(Bay="ALL")
-write.csv(global,file="./diversity_stats/diversity_output_files/YOY16_rare/basic_stats17.csv" )
-
-setPop(wfpopLD) <-~Bay
-g2h_bay <-genind2hierfstat(wfpopLD, pop=wfpopLD@pop)
-
-wfshin <- popsub(wfpopLD, sublist=c("Shin"))  #%>% missingno("geno", cutoff=0.10)
-wfshinh <- genind2hierfstat(wfshin) 
-wfshi<-basic.stats(wfshinh)
-#wfshi <-diff_stats(wfshin)
-wfnap <- popsub(wfpopLD, sublist=c("Nap"))
-wfmor <- popsub(wfpopLD, sublist=c("Mor"))
-
 ##### Box and whisker plots for diversity stats #####
 drabcolors <-c("#d0d1e6","#a6bddb", "#67a9cf", "#1c9099", "#016450")
+#drabcolors <-c("gray","#d0d1e6","#a6bddb", "#67a9cf", "#1c9099", "#016450")
 
 #Nei's gene diversity
+#meltlocstats2 %>%
 meltlocstats_bay %>%
   filter(variable == "Ht") %>%
   ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
@@ -455,9 +440,35 @@ ggsave('Hobay17.png', path="./diversity_stats/diversity_figs/YOY16_rare", width 
 # differences in sample size can bias the number of alleles sampled in a population
 # calculate allelic richness corrected for sample size using rarefaction
 
+
+################################ START RAREIFACTION LOOP 3 ###############################################
+
+grp_ar <-list()
+
+for (j in 1:100){
 # overall ====
-setPop(wfpopLD) <- ~Ocean
-dat <- hierfstat:::genind2hierfstat(wfpopLD)
+
+#rareify
+setPop(wfpopLD)<-~Bay
+  df <-genind2df(wfpopLD, usepop = TRUE, oneColPerAll = TRUE) 
+  df$Ind <- rownames(df)
+  df <-df[,c(ncol(df),1:(ncol(df)-1))]
+  df[df=="NA"] <- 0 
+  df.split <-split(df, df$pop)
+  new.shin <-sample_n(df.split$Shin,30)
+  new.mt <-sample_n(df.split$Mt,30)
+  rare.bays <-bind_rows(new.shin,new.mt,df.split$Jam,df.split$Mor,df.split$Nap)
+  #wfpopLD <-df2genind(rare.bays, pop=pop, ploidy=2)
+  wf.rare16 <-df2gtypes(rare.bays,ploidy=2)
+  wf.rare16 <-gtypes2genind(wf.rare16)
+#reattach the strata
+  str16 <-data.frame(rep("Atl",146), wf.rare16@pop)
+  names(str16)<-c("Ocean","Bay")
+  strata(wf.rare16) <-str16
+  
+#allelic richness ocean level  
+setPop(wf.rare16) <- ~Ocean
+dat <- hierfstat:::genind2hierfstat(wf.rare16)
 ar <- allelic.richness(dat,diploid = TRUE)
 
 ar <- as.data.frame(ar$Ar) %>%
@@ -466,22 +477,36 @@ ar <- as.data.frame(ar$Ar) %>%
   select(-dumpop)
 
 # By Bay ===
-# by region ====
-setPop(wfpopLD) <- ~Bay
-dat <- hierfstat:::genind2hierfstat(wfpopLD, pop = wfpopLD@pop)
+setPop(wf.rare16) <- ~Bay
+dat <- hierfstat:::genind2hierfstat(wf.rare16, pop = wf.rare16@pop)
 df <- allelic.richness(dat,diploid = TRUE)
 
-# I am not sure how to tell which one is which in order to label the columns, but I assume they're in the same order as WFPOPLD?
 df <- as.data.frame(df$Ar) %>%
   rownames_to_column("LOCUS") #%>%dplyr::rename(Nap = V1,Mor = V2,Jam = V3,Shin = V4,Mt = V5)
-ar <- left_join(ar, df)
-write.csv(ar, "./diversity_stats/diversity_output_files/YOY16_rare/rarefied_allelecount.csv")
+ar <- left_join(ar, df)%>%mutate(iter=j)
+grp_ar[[j]]<-ar
+}
+
+
+################################# END RAREIFACTION LOOP 3 #########################################
+ar <-bind_rows(grp_ar)
+
+ar_mean <-ar%>%group_by(LOCUS)%>% 
+  summarize(ALL=mean(ALL),Jam=mean(Jam),Mor=mean(Mor),Mt=mean(Mt),Nap=mean(Nap),Shin=mean(Shin))
+
+ar_sd <-ar%>%group_by(LOCUS)%>% 
+  summarize(ALL=sqrt(sum(ALL)/n_distinct(ar$iter)),Jam=sqrt(sum(Jam)/n_distinct(ar$iter)),
+            Mor=sqrt(sum(Mor)/n_distinct(ar$iter)),Mt=sqrt(sum(Mt)/n_distinct(ar$iter)),
+            Nap=sqrt(sum(Nap)/n_distinct(ar$iter)),Shin=sqrt(sum(Shin)/n_distinct(ar$iter)))
+
+write.csv(ar_mean, "./diversity_stats/diversity_output_files/YOY16_rare/rarefied_allelecount_mean.csv")
+write.csv(ar_sd, "./diversity_stats/diversity_output_files/YOY16_rare/rarefied_allelecount_SD.csv")
 
 
 #visualize results as boxplot. 
 
 #for rarified alleles, you have to make a new Allelic Richness analysis for each group you are comparing. 
-meltar2 <- pivot_longer(ar, cols=c("Mt","Shin","Nap","Mor","Jam","ALL"),names_to="variable", values_to="value")
+meltar2 <- pivot_longer(ar_mean, cols=c("Mt","Shin","Nap","Mor","Jam","ALL"),names_to="variable", values_to="value")
 meltar3 <-filter(meltar2, variable != "ALL") #it doenst like it when you exclude the "all" category... 
 meltar_all <-filter(meltar2, variable == "ALL")
 
@@ -498,19 +523,57 @@ meltar3 %>%
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
 ggsave('rareifiedallelesLD_bay17.png',path="./diversity_stats/diversity_figs/YOY16_rare", width = 10, height = 5)
 
+############################# START RAREIFACTION LOOP 4 ############################################
 ##Private alleles
-df <-genind2df(wfpopLD, usepop = TRUE, oneColPerAll = TRUE) 
+
+grp_pa <-list()
+
+for (j in 1:100){
+#rareify
+  setPop(wfpopLD)<-~Bay
+  df <-genind2df(wfpopLD, usepop = TRUE, oneColPerAll = TRUE) 
+  df$Ind <- rownames(df)
+  df <-df[,c(ncol(df),1:(ncol(df)-1))]
+  df[df=="NA"] <- 0 
+  df.split <-split(df, df$pop)
+  new.shin <-sample_n(df.split$Shin,30)
+  new.mt <-sample_n(df.split$Mt,30)
+  rare.bays <-bind_rows(new.shin,new.mt,df.split$Jam,df.split$Mor,df.split$Nap)
+  #wfpopLD <-df2genind(rare.bays, pop=pop, ploidy=2)
+  wf.rare16 <-df2gtypes(rare.bays,ploidy=2)
+  wf.rare16 <-gtypes2genind(wf.rare16) 
+  #setPop(wf.rare16)<-~Bay
+
+df <-genind2df(wf.rare16, usepop = TRUE, oneColPerAll = TRUE) 
 df$Ind <- rownames(df)
-df <-df[,c(36,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35)]
+df<-df[,c(ncol(df),1:(ncol(df)-1))]
 df[df=="NA"] <- 0 # missing data must be 0
 wf.g <-df2gtypes(df,ploidy=2)
 
-library("data.table")
-pA <-as.data.frame(privateAlleles(wf.g)) 
+pA <-as.data.frame(privateAlleles(wf.g))%>%mutate(iter=j)
 setDT(pA,keep.rownames=TRUE)
 colnames(pA)[1] <- "LOCUS"
 
-meltpA <- pivot_longer(pA, cols=c("Mt","Shin","Nap","Mor","Jam"),names_to="variable", values_to="value")
+grp_pa[[j]] <-pA
+}
+############################# END RAREIFACTION LOOP 4 ############################################
+
+pA <-bind_rows(grp_pa)
+
+pA_roundedmean <-pA%>%group_by(LOCUS)%>% 
+  summarize(Jam=round(mean(Jam)),Mor=round(mean(Mor)),
+            Mt=round(mean(Mt)),Nap=round(mean(Nap)),Shin=round(mean(Shin)))
+
+pA_sd <-pA%>%group_by(LOCUS)%>% 
+  summarize(Jam=sqrt(sum(Jam)/n_distinct(pA$iter)),
+            Mor=sqrt(sum(Mor)/n_distinct(pA$iter)),Mt=sqrt(sum(Mt)/n_distinct(pA$iter)),
+            Nap=sqrt(sum(Nap)/n_distinct(pA$iter)),Shin=sqrt(sum(Shin)/n_distinct(pA$iter)))
+
+write.csv(pA_roundedmean, "./diversity_stats/diversity_output_files/YOY16_rare/privateAlleles_roundedmean.csv")
+write.csv(pA_sd, "./diversity_stats/diversity_output_files/YOY16_rare/privateAlleles_SD.csv")
+
+
+meltpA <- pivot_longer(pA_roundedmean, cols=c("Mt","Shin","Nap","Mor","Jam"),names_to="variable", values_to="value")
 
 meltpA %>%
   mutate(GRP = as.factor(variable)) %>%
@@ -524,6 +587,16 @@ meltpA %>%
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
 ggsave('privateallelesLD_bay17.png',path="./diversity_stats/diversity_figs/YOY16_rare", width = 10, height = 5)
 
+##heatmap of private alleles by locus
+ggplot(meltpA, aes(x = LOCUS, y =factor(variable, level=c('Jam', 'Mor', 'Shin', 'Nap',"Mt")), fill=value)) +
+  geom_tile(color = "black") +
+  geom_text(aes(label = value), color="grey") +
+  scale_fill_viridis(option="plasma") +
+  coord_fixed(ratio = 1) +
+  ylab("BAY")+
+  #theme_standard() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+ggsave('privateAllelesHeat.png',path="./diversity_stats/diversity_figs/YOY16_rare", width = 10, height = 7)
 
 
 ######## TEST FOR SIGNIFICANT DIFFERENCES#####
@@ -541,9 +614,18 @@ ggsave('privateallelesLD_bay17.png',path="./diversity_stats/diversity_figs/YOY16
     #loc_stats_shin <- bay year con shin
     #loc_stats_16 <- 2016 YOY at bay level. 
 
-#set level to test for friedmans
-fdata <- loc_stats_bay
+#To do this the rareifaction way, we perform the test on each iteration of the rareification 
+# then we perform fisher's test to adjust the p value. 
+# I think this is more appropriate than performing the test on the mean values. 
 
+
+#set level to test for friedmans
+fdata <- filter(grp_locstats, GRP %in% c("Nap","Mor","Jam","Shin","Mt")) #Bay
+#return to list form
+fdata <-split(fdata, fdata$iter)
+
+#turn the friedman's tests into a function.
+#####Start function########### 
 
 #####Friedman's test for Global heterogeneity#####
 a<-friedman.test(Hs~GRP | LOCUS, data= fdata) #Hs - fixing this. 
@@ -559,6 +641,8 @@ p.vals <-c(a$p.value, b$p.value,c$p.value,d$p.value,e$p.value,f$p.value,g$p.valu
 comparisons <-c(a$data.name,b$data.name,c$data.name,d$data.name,e$data.name,f$data.name,g$data.name)
 
 friedmans_tests <-cbind(comparisons, p.vals)%>%as.data.frame
+#### END FUNCTION #####
+
 write.csv(friedmans_tests,"./diversity_stats/diversity_output_files/YOY16_rare/friedmanstests.csv")
 
 #######Wilcoxon tests #####
