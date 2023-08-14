@@ -662,17 +662,33 @@ fisher_p <-list()
 fisher_pvals <-c()
 bonferroni_pvals <-c()
 stouffer_pvals <-c()
+simes_pvals <-c()
 for (i in 1:length(fisher)){
   df <-fisher[[i]]
+  #Empirical Browns test
+  #The browns method is better because it accounts for nonindependence 
+  #https://www.bioconductor.org/packages/devel/bioc/html/EmpiricalBrownsMethod.html 
+ # test_stat <-word(df$comparisons, start=1, end=1)#get the comparison
+ # fd <-dplyr::select(fdata[[i]],c(GRP, LOCUS,test_stat[1]))%>%
+ #   pivot_wider(names_from = LOCUS, values_from = test_stat[1])%>%as.data.frame() #create the matrix
+ # brown_p[[i]] <-empiricalBrownsMethod(data_matrix = fd, p_values = )
+  
+  #fisher test
   fisher_p[[i]] <-fisher(df$p.vals, adjust="none")
   fisher_pvals[i]<-fisher_p[[i]]$p
+  #bonferroni test
   bp <-bonferroni(df$p.vals, adjust="none")
   bonferroni_pvals[i]<-bp$p
+  #stouffer test
   sp <-stouffer(df$p.vals, adjust="none")
   stouffer_pvals[i]<-sp$p
+  #simes test
+  as.list(df$p.vals)
+  simes_p <-metapod::combineParallelPValues(as.list(df$p.vals), method="simes")
+  simes_pvals[i]<-simes_p$p.value
 }
 names(fisher_p)<-names(fisher)
-fisher_pvals<-data.table(fisher_pvals,bonferroni_pvals,stouffer_pvals, comparison=names(fisher))
+fisher_pvals<-data.table(fisher_pvals,bonferroni_pvals,stouffer_pvals, simes_pvals, comparison=names(fisher))
 #However, this fisher test is for independent tests which these are not. 
 
 write.csv(fisher_pvals,"./diversity_stats/diversity_output_files/YOY16_rare/friedmanstests_adjustpval.csv")
@@ -812,47 +828,47 @@ results <-bind_rows(results_nei, results_fis, results_even, results_shannon)
 ############# END WILCOXON FUNCTION ####################################
 
 ##Apply wilcoxon function
-
 wil_test <- fdata%>% lapply(w_test)
-
 wil_df <-bind_rows(wil_test, .id="iter")
 #save raw values
 write.csv(wil_df,"./diversity_stats/diversity_output_files/YOY16_rare/wilcoxontests_raw.csv")
 
 #apply the fisher test to the comparisons.
 # we will do bonferroni as well just to be safe.  
+wt <-mutate(wil_df, p.value=as.numeric(p.value))%>%
+  split(wil_df$test)
 fisher_p <-list()
 fisher_pvals <-c()
 bonferroni_pvals <-c()
 stouffer_pvals <-c()
-for (i in 1:length(wil_test)){
-  df <-wil_test[[i]]
+simes_pvals <-c()
+for (i in 1:length(wt)){
+  df <-wt[[i]]
+  #fisher
   fisher_p[[i]] <-fisher(df$p.value, adjust="none")
   fisher_pvals[i]<-fisher_p[[i]]$p
+  #bonferroni
   bp <-bonferroni(df$p.value, adjust="none")
   bonferroni_pvals[i]<-bp$p
+  #stouffer
   sp <-stouffer(df$p.value, adjust="none")
   stouffer_pvals[i]<-sp$p
+  #simes
+  simes_p <-metapod::combineParallelPValues(as.list(df$p.value), method="simes")
+  simes_pvals[i]<-simes_p$p.value
 }
-wilcoxon_fisher_pvals<-data.table(fisher_pvals,bonferroni_pvals,stouffer_pvals)
+wilcoxon_fisher_pvals<-data.table(fisher_pvals,bonferroni_pvals,stouffer_pvals,simes_pvals,comparison=names(wt))
 #However, this fisher test is for independent tests which these are not. 
+write.csv(wilcoxon_fisher_pvals,"./diversity_stats/diversity_output_files/YOY16_rare/wilcoxon_adjustpval.csv")
 
-########################## stopped here 8/11/23 ############
-# the problem is we have to combine the pvalues by comparison, here right now the pvals are disagregated. 
-
-
-
-
-
-
-
+############ MAKE PLOTS #############################################
 #results <- results %>% dplyr::select(-temp)
-results <-mutate(results, bonferroni=0.05/10) # number of pairwise comparisons ####CHECK THIS
-results <-mutate(results, significance = ifelse(p.value>=bonferroni,"not significant","significant"))
-write.csv(results,file="./diversity_stats/diversity_output_files/YOY16_rare/wilcox.csv")
+#results <-mutate(results, bonferroni=0.05/10) # number of pairwise comparisons ####CHECK THIS
+#results <-mutate(results, significance = ifelse(p.value>=bonferroni,"not significant","significant"))
+#write.csv(results,file="./diversity_stats/diversity_output_files/YOY16_rare/wilcox.csv")
 
 #heatmap of results (new way)
-results <- mutate(results, starsig=ifelse(significance=="significant",round(p.value,4),NA),test.statistic=abs(stat))
+#results <- mutate(results, starsig=ifelse(significance=="significant",round(p.value,4),NA),test.statistic=abs(stat))
 results<-mutate(results, p_value = cut(p.value, breaks=c(0,0.005, 0.01,0.05,0.1,0.5,1)))
 cols <- c("(0,0.005]"="#034e7b", "(0.005,0.01]" = "#045a8d", "(0.01,0.05]" = "#2b8cbe", "(0.05,0.1]" = "#74a9cf", "(0.1,0.5]"  = "#a6bddb", "(0.5,1]"="#d0d1e6")
 
