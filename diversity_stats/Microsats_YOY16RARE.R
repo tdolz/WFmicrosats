@@ -682,8 +682,7 @@ for (i in 1:length(fisher)){
   #stouffer test
   sp <-stouffer(df$p.vals, adjust="none")
   stouffer_pvals[i]<-sp$p
-  #simes test
-  as.list(df$p.vals)
+  #simes test)
   simes_p <-metapod::combineParallelPValues(as.list(df$p.vals), method="simes")
   simes_pvals[i]<-simes_p$p.value
 }
@@ -861,6 +860,11 @@ wilcoxon_fisher_pvals<-data.table(fisher_pvals,bonferroni_pvals,stouffer_pvals,s
 #However, this fisher test is for independent tests which these are not. 
 write.csv(wilcoxon_fisher_pvals,"./diversity_stats/diversity_output_files/YOY16_rare/wilcoxon_adjustpval.csv")
 
+
+################## WE STOPPED HERE 8/18/23 WITH THE RAREFACTION CONVERSION #########################
+
+
+
 ############ MAKE PLOTS #############################################
 #results <- results %>% dplyr::select(-temp)
 #results <-mutate(results, bonferroni=0.05/10) # number of pairwise comparisons ####CHECK THIS
@@ -1010,39 +1014,6 @@ results_ar %>%
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
 ggsave('rariefied_allelesBaytile17.png',path="./diversity_stats/diversity_figs/YOY16_rare", width = 10, height = 7)
 
-
-##### FST ######
-
-#Weir and Cockheram FST global & pairwise. - probably your best bet. 
-
-wfpopLD <-wfpop17
-
-setPop(wfpopLD) <-~Bay
-wf.g2 <-genind2gtypes(wfpopLD)
-statFst(wf.g2)
-#popStruct <- popStructTest(wf.g2, stats = c(statFst, statFstPrime), nrep = 1000, quietly = TRUE)
-popStruct <- popStructTest(wf.g2, nrep = 1000, quietly = FALSE)
-popStruct
-
-#FST heatmap
-bayFST <-as.data.frame(popStruct$pairwise$result) %>% dplyr::select(strata.1, strata.2, Fst, Fst.p.val)
-
-# Filled by test statistic: NEI - shows graphical options. 
-bayFST %>%
-  ggplot(aes(x = strata.1, y = strata.2))+
-  geom_tile(aes(fill=Fst), show.legend = TRUE)+ # Filled by test statistic
-  #geom_tile(aes(fill=p.value), show.legend = TRUE)+ #filled  by p.value (gradient)
-  #geom_tile(aes(fill=p_value), show.legend = TRUE)+ #filled  by p_value (discrete)
-  #scale_fill_gradient(low ="#023858" , high = "#a6bddb", space = "Lab", na.value = "white", guide = "colourbar", aesthetics = "fill")+ #gradient fill
-  scale_fill_viridis_c()+
-  #scale_fill_manual(values=cols)+
-  geom_text(aes(label = round(Fst.p.val,3)), color="white", size=5)+
-  #scale_color_manual(values=c("white","red"), guide=FALSE)+
-  xlab("")+ylab("")+
-  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-ggsave('FSTBaytile17.png',path="./diversity_stats/diversity_figs/YOY16_rare", width = 7, height = 7)
-
-#see previous scripts for other kinds of FST you can calculate
 
 
 #### Inbreeding - Internal Relatedness ####

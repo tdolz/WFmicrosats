@@ -7,7 +7,6 @@
 ### in a third sheet, we will compare within Mattituck and Within Shinnecock. 
 
 library('plyr')
-library("dplyr")
 library("poppr")
 library("tidyr")
 library('purrr')
@@ -18,6 +17,7 @@ library("cowplot")
 library("vcfR")
 library("adegenet")
 library("forcats")
+library("dplyr")
 
 
 #keeping everything in this folder
@@ -141,7 +141,7 @@ kgrp$grp <-grp_BIC$grp
 # show cluster distribution across populations
 
 ## Compare geographic regions of origin and assigned group memberships
-kgrps <-kgrp %>% group_by(pop,grp)%>%summarize(group=n_distinct(Ind),.groups="drop")
+kgrps <-kgrp %>% group_by(pop,grp)%>%dplyr::summarize(group=n_distinct(Ind),.groups="drop")
 kgrps %>%
   ggplot(aes(x=pop, y=group, fill=grp)) +
   scale_fill_manual(values=tolcolors)+ylab("number of individuals")+
@@ -162,10 +162,10 @@ grp_membership <- grp_membership %>%
   left_join(GRP)%>%mutate(groupnum=as.integer(GRP)) %>%arrange(Ind,MEMBSHIP)
 
 #order the bars by their predominant association
-mjgrp <-grp_membership%>%group_by(Ind)%>%summarize(mxmem =max(MEMBSHIP))
+mjgrp <-grp_membership%>%group_by(Ind)%>%dplyr::summarize(mxmem =max(MEMBSHIP))
 mjgrp<-left_join(grp_membership,mjgrp)%>%
 mutate(major.group=ifelse(mxmem==MEMBSHIP,groupnum,NA))%>%
-  select(Ind,major.group)
+  dplyr::select(Ind,major.group)
 mjgrp <-mjgrp[!is.na(mjgrp$major.group), ] 
 grp_membership <-left_join(grp_membership, mjgrp)
 
@@ -367,7 +367,7 @@ bay_kstat <-grp_BIC$Kstat
 # naive number of groups is 3 BIC=586.1856, with 100PC
 # naive number of groups is 2 BIC=277.4144, with 50PC
 # naive number of groups is 2 BIC=340.3976, with 150PC
-grp_BIC <- find.clusters.genind(wfbays16, stat = "BIC",n.clust = 2, n.pca=50)
+grp_BIC <- find.clusters.genind(wfbays16, stat = "BIC",n.clust = 3, n.pca=50)
 bay_kstat <-grp_BIC$Kstat
 
 # # perform stratified cross validation
@@ -383,7 +383,7 @@ retain #100
 
 #make scatterplot
 # perform DAPC using k-mean clusters as groups
-dapck <-dapc(wfbays16, grp_BIC$grp, n.pca = 100, n.da=2) #not going to specifiy the number of da, retain 4.
+dapck <-dapc(wfbays16, grp_BIC$grp, n.pca = 100, n.da=4) #not going to specifiy the number of da, retain 4.
 scatter(dapck,grp=grp_BIC$grp, posi.da="bottomright", bg="white", pch=17:22, scree.pca=TRUE, posi.pca="bottomleft", col=tolcolors)
 
 #cluster assignments relative to original group assignments
@@ -392,7 +392,7 @@ kgrp$grp <-grp_BIC$grp
 # show cluster distribution across populations
 
 ## Compare geographic regions of origin and assigned group memberships
-kgrps <-kgrp %>% group_by(pop,grp)%>%summarize(group=n_distinct(Ind),.groups="drop")
+kgrps <-kgrp %>% group_by(pop,grp)%>%dplyr::summarize(group=n_distinct(Ind),.groups="drop")
 kgrps %>%
   ggplot(aes(x=pop, y=group, fill=grp)) +
   scale_fill_manual(values=tolcolors)+ylab("number of individuals")+
@@ -413,7 +413,7 @@ grp_membership <- grp_membership %>%
   left_join(GRP)%>%mutate(groupnum=as.integer(GRP)) %>%arrange(Ind,MEMBSHIP)
 
 #order the bars by their predominant association
-mjgrp <-grp_membership%>%group_by(Ind)%>%summarize(mxmem =max(MEMBSHIP))
+mjgrp <-grp_membership%>%group_by(Ind)%>%dplyr::summarize(mxmem =max(MEMBSHIP))
 mjgrp<-left_join(grp_membership,mjgrp)%>%
   mutate(major.group=ifelse(mxmem==MEMBSHIP,groupnum,NA))%>%
   select(Ind,major.group)
