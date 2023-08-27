@@ -26,8 +26,8 @@ setwd("/Users//tdolan/Documents//R-Github//WFmicrosats")
 
 ##### Formating the dataset #####
 # We are going to use the doubl0 version. 
-wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept20204genalex_doubl0ABC.csv")
-wfpop4df <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/popcorrect_17_sept2020_doubl0ABC.csv", header = TRUE) #csv version 
+wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/data/popcorrect_17_sept20204genalex_doubl0ABC.csv")
+wfpop4df <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/data/popcorrect_17_sept2020_doubl0ABC.csv", header = TRUE) #csv version 
 
 splitStrata(wfpop) <-~Ocean/Bay/Con/Year
 setPop(wfpop) <-~Bay
@@ -114,7 +114,8 @@ bay_kstat
 # naive number of groups is 3 BIC=586.1856, with 100PC
 # naive number of groups is 2 BIC=625.8268, with 150PC
 # overall best number of groups is 3, I am going to say because BIC is lower
-grp_BIC <- find.clusters.genind(wfpopLD, stat = "BIC",n.clust = 3, n.pca=100)
+grp_BIC <- find.clusters.genind(wfpopLD, stat = "BIC",
+                                n.clust = 13, n.pca=100)
 bay_kstat <-grp_BIC$Kstat
 
 # # perform stratified cross validation
@@ -130,7 +131,7 @@ retain #100 or 150PC is best.
 
 #make scatterplot
 # perform DAPC using k-mean clusters as groups
-dapck <-dapc(wfpopLD, grp_BIC$grp, n.pca = 150, n.da=2) #not going to specifiy the number of da, retain 4.
+dapck <-dapc(wfpopLD, grp_BIC$grp, n.pca = retain, n.da=2) #not going to specifiy the number of da, retain 4.
 scatter(dapck,grp=grp_BIC$grp, posi.da="topright", bg="white", pch=17:22, scree.pca=TRUE, posi.pca="topleft", col=tolcolors)
 
 table(pop(wfpopLD), grp_BIC$grp)
@@ -144,7 +145,7 @@ kgrp$grp <-grp_BIC$grp
 kgrps <-kgrp %>% group_by(pop,grp)%>%dplyr::summarize(group=n_distinct(Ind),.groups="drop")
 kgrps %>%
   ggplot(aes(x=pop, y=group, fill=grp)) +
-  scale_fill_manual(values=tolcolors)+ylab("number of individuals")+
+  #scale_fill_manual(values=tolcolors)+ylab("number of individuals")+
   geom_bar(stat="identity",alpha=0.7, position=position_dodge())+
   theme(axis.text.x = element_text(angle = 90),axis.text = element_text(size = 14, face="bold"),axis.title = element_text(size = 14,face="bold"),panel.background = element_rect(fill = 'white', colour = 'black'),
         panel.grid.major = element_line(colour = "white"),panel.spacing = unit(1, "lines"))
@@ -174,9 +175,9 @@ memprob <-ggplot(grp_membership, aes(x = fct_reorder(Ind,major.group), y = MEMBS
   geom_bar(stat = "identity") +
   labs(x = "Individual", y = "membership probability") +
   facet_grid(. ~ pop, scales = "free", space = "free") +
-  scale_fill_manual(values = tolcolors)+
+  #scale_fill_manual(values = tolcolors)+
   theme_cowplot();memprob
-ggsave("bays_kmeans_membship_150pc_3clust.png", width=10, height=5, path="/Users/tdolan/documents/WIP research/microsats/microsat_figs/figs2023")
+#ggsave("bays_kmeans_membship_150pc_3clust.png", width=10, height=5, path="/Users/tdolan/documents/WIP research/microsats/microsat_figs/figs2023")
 #dev.off()
 #dim 510x345 gets rid of the white lines.
 

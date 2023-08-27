@@ -135,6 +135,9 @@ write.csv(yoy16res, file="./diversity_stats/diversity_output_files/YOY16_bay/bay
 #randomly sample from within shinnecock and mattituck 100x
 rare.out <-list()
 for(i in 1:100){
+  
+  
+  
   df.split <-split(df, df$pop)
   new.shin <-sample_n(df.split$Shin,30)
   new.mt <-sample_n(df.split$Mt,30)
