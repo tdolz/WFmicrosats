@@ -91,6 +91,23 @@ mtres <-dplyr::select(mtres, strata.1,strata.2, Fst, Fst.p.val) %>% dplyr::renam
 mtres <-pradj(mtres)
 write.csv(mtres, file="./diversity_stats/diversity_output_files/Mattituck/MT_fst_BayConYEAR_notrarified.csv")
 
+#BAY/YEAR/CON Mattituck. _ WITHOUT 2015. 
+setPop(mtco) <-~Bay/Con/Year
+mtco <-popsub(mtco, sublist=c("Mt_1_2016", "Mt_2_2016", "Mt_3_adults", "Mt_4_adults"))
+wf.M2 <- genind2gtypes(mtco)
+popStruct.M <- popStructTest(wf.M2, nrep = 1000, quietly = TRUE)
+popStruct.M
+#BH correct the Fst pvals
+mtres <- as.data.frame(popStruct.M$pairwise$result)
+mtres <-dplyr::select(mtres, strata.1,strata.2, Fst, Fst.p.val) %>% dplyr::rename(Pr.exact=Fst.p.val)
+mtres <-pradj(mtres)
+write.csv(mtres, file="./diversity_stats/diversity_output_files/Mattituck/MT_fst_BayConYEAR_notrarifiedNO2015.csv")
+
+
+
+
+
+
 #Shinnecock. 
 setPop(shinco) <-~Bay/Con/Year
 wf.s2 <- genind2gtypes(shinco)
@@ -106,7 +123,7 @@ popStruct.S
 mtres <- as.data.frame(popStruct.S$pairwise$result)
 mtres <-dplyr::select(mtres, strata.1,strata.2, Fst, Fst.p.val) %>% dplyr::rename(Pr.exact=Fst.p.val)
 mtres <-pradj(mtres)
-write.csv(mtres, file="./diversity_stats/diversity_output_files/Mattituck/MT_fst_BayConYEAR_notrarified.csv")
+write.csv(mtres, file="./diversity_stats/diversity_output_files/Mattituck/SHIN_fst_BayConYEAR_notrarified.csv")
 
 #### The bays comparison where we do a rareifaction########## 
 setPop(wfpopLD) <-~Bay/Year

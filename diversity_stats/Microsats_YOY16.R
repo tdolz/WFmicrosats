@@ -1,5 +1,6 @@
 ### Genetic analysis Bays ###
 ## created 5-30-23 From Microsats_20.R
+## updated to create plots in the microsat_figs_yoy16.R script on 1/24/23
 ## 
 
 ## NOTES ##
@@ -40,6 +41,8 @@ wfpop <- read.genalex("./data/popcorrect_17_sept20204genalex_doubl0ABC.csv")
 wfpop4df <-read.csv("./data/popcorrect_17_sept2020_doubl0ABC.csv", header = TRUE) #csv
 
 splitStrata(wfpop) <-~Ocean/Bay/Con/Year
+setPop(wfpop) <-~Bay/Year/Con
+wfpop <-popsub(wfpop, exclude=c("Mt_2015_5", "Mt_2016_5"))
 setPop(wfpop) <-~Bay
 
 #do data cleanup first- on full dataset. 
@@ -60,77 +63,57 @@ info_table(wfpopLD, plot = TRUE, scaled =FALSE)
 og.wfpopLD <-wfpopLD
 ##Subset to YOY16 only##
 #remove all individuals that aren't 2016 YOY
-setPop(wfpopLD) <-~Bay/Year
-wfpop <-popsub(wfpop, exclude=c("Mt_2015","Mt_adults","Shin_2017"))
-setPop(wfpop) <-~Bay
+setPop(wfpopLD) <-~Bay/Year/Con
+unique(wfpopLD@pop)
+wfpopLD <-popsub(wfpopLD, exclude=c("Mt_2015_1","Mt_2015_2","Mt_adults_3", "Mt_adults_4", "Shin_2017_1","Shin_2017_2"))
+unique(wfpopLD@pop)
 
 
-#HWE Heatmap#
+###CREATE DATASET FOR THE no 2015 COMPARISON ####
+#but retain the adults and Shin 2017
+#remove mt_2015. Also remove unclassified adults
+setPop(og.wfpopLD)<-~Bay/Year/Con
+wfpop.mtshi <-popsub(og.wfpopLD, exclude=c("Mt_2015_1","Mt_2015_2","Mt_2015_5","Mt_2016_5"))
+
+#How many loci out of HWE? - all YOY 2016
 setPop(wfpopLD) <-~Ocean
-hw.test(wfpopLD, B=1000) #permutation based
-hw.test(wfpop2CLEAN, B=1000)
-hw.test(wfpopLD, B=0) #analytical p value
-wfhwe.pop <- seppop(wfpopLD) %>% lapply(hw.test)
+hwe.ocean <-hw.test(wfpopLD, B=1000)%>%as.data.frame()%>% 
+  mutate(pop="Atl")%>%
+  mutate(pval.adj =p.adjust(`Pr(chi^2 >)`, method="BH"),p.chi =ifelse(`Pr(chi^2 >)`>0.05,"in","out"))%>%
+  mutate(p.chi.adj = ifelse(pval.adj >0.05,"in","out"))
+# loci out of HWE - by bay 2016
+setPop(wfpopLD)<-~Bay
+wfhwe.pop <- seppop(wfpopLD) %>% lapply(hw.test, B=1000)
+for(i in 1:length(wfhwe.pop)){
+  wfhwe.pop[[i]]<-as.data.frame(wfhwe.pop[[i]])%>%
+    mutate(pop=names(wfhwe.pop)[i])%>%
+    mutate(pval.adj =p.adjust(`Pr(chi^2 >)`, method="BH"),p.chi =ifelse(`Pr(chi^2 >)`>0.05,"in","out"))%>%
+    mutate(p.chi.adj = ifelse(pval.adj >0.05,"in","out"))
+  }
+wfhwe.pop <-bind_rows(wfhwe.pop)%>%bind_rows(hwe.ocean)
+
+###HWE IN MATTITUCK CREEK & SHINNECOCK BAY ################
+setPop(wfpop.mtshi)<-~Bay/Year/Con
+mtshi <- seppop(wfpop.mtshi) %>% lapply(hw.test, B=1000)
+for(i in 1:length(mtshi)){
+  mtshi[[i]]<-as.data.frame(mtshi[[i]])%>%
+    mutate(pop=names(mtshi)[i])%>%
+    mutate(pval.adj =p.adjust(`Pr(chi^2 >)`, method="BH"),p.chi =ifelse(`Pr(chi^2 >)`>0.05,"in","out"))%>%
+    mutate(p.chi.adj = ifelse(pval.adj >0.05,"in","out"))
+}
+wfhwe.pop <-bind_rows(mtshi)%>%bind_rows(wfhwe.pop)
+wfhwe.pop %>% group_by(pop)%>%summarize(sig=sum(pval.adj <= 0.05))
+
 write.csv(wfhwe.pop, file="./diversity_stats/diversity_output_files/YOY16_bay/wfhwepop16.csv")
-(wfhwe.mat <- sapply(wfhwe.pop, "[", i = TRUE, j = 3)) # Take the third column with all rows ---> output this for supplementary tables.
-wfhw.mc <-sapply(wfhwe.pop, "[", i = TRUE, j = 4) #the PR exact based on the Monte carlo test! ----> p.values on the hw.test
-wfhw.mc  # this is just the p values. 
-alpha  <- 0.05
-newmat <- wfhwe.mat
-newmat[newmat > alpha] <- 1 #where the p value on the chi square is greater than 0.05, give it a 1.
-# so pink means zero, which means p < 0.05, which means out of HWE. 
-levelplot(t(newmat),scales=list(x=list(rot=90)))
-ggsave("HWEtest16.png", path="./diversity_stats/diversity_figs/YOY16")
-dev.off()
 
 #PopGenReport - Remember to turn this off. 
 #setPop(wfpopLD) <-~Bay
 #wf.gen <-genclone2genind(wfpopLD) 
 #popgenreport(wf.gen,mk.counts=TRUE,mk.locihz = TRUE, mk.fst=TRUE, mk.allele.dist=TRUE, mk.null.all=TRUE,mk.allel.rich = TRUE,mk.differ.stats = TRUE,path.pgr=getwd(),mk.Rcode=TRUE,mk.pdf=TRUE )
 
-### Summary Data ####
-setPop(wfpopLD) <-~Bay
-toto <-summary(wfpopLD)
-hexhobs <-as.data.frame(toto$Hexp-toto$Hobs) 
-hexhobs <- tibble::rownames_to_column(hexhobs,"locus")
-names(hexhobs) <-c("locus","difference")
-
-#by bay
-hh <- seppop(wfpopLD) %>% lapply(summary)
-
-hhh <-function(hexp, hobs){
-  bayhet <-as.data.frame(hexp)%>% tibble::rownames_to_column("locus")
-  bayhobs <-as.data.frame(hobs)%>% tibble::rownames_to_column("locus")
-  bayhh <-left_join(bayhet, bayhobs, by=c("locus")) %>% mutate(hexhobs=hexp-hobs)
-  bayhh
-}
-naph <-hhh(hh$Nap$Hexp, hh$Nap$Hobs) %>% mutate(Bay="Nap")
-morh <-hhh(hh$Mor$Hexp, hh$Mor$Hobs) %>% mutate(Bay="Mor")
-Mth <-hhh(hh$Mt$Hexp, hh$Mt$Hobs) %>% mutate(Bay="Mt")
-jamh <-hhh(hh$Jam$Hexp, hh$Jam$Hobs) %>% mutate(Bay="Jam")
-shinh <-hhh(hh$Shin$Hexp, hh$Shin$Hobs) %>% mutate(Bay="Shin")
-h4 <- bind_rows(naph, morh, Mth, jamh, shinh)
-
-#heatmap of observed minus expected. 
-ggplot(h4, aes(x = locus, y = Bay, fill=hexhobs)) +
-  geom_tile(color = "black") +
-  geom_text(aes(label = round(hexhobs, 3)), color="grey") +
-  scale_fill_viridis(option="plasma") +
-  coord_fixed(ratio = 1) +
-  ylab("")+
-  #theme_standard() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
-ggsave('hexhobsheat17.png',path="./diversity_stats/diversity_figs/YOY16", width = 10, height = 7)
-
-
 ###Summary stats from popgenreport. 
-
-
 ##### Shannon's summary stats ########
 #https://gist.github.com/sjoleary/cdc32efbfd50c96eef446ebb7c2f2387
-
-# genind object of genotypes
-wfpopLD
 
 #dataframe with sample information
 setPop(wfpopLD.og) <- ~Bay/Con/Year
@@ -143,30 +126,26 @@ SampleInfo <- separate(SampleInfo, pop, c("Bay","Con","Year"))
 SampleInfo <-mutate(SampleInfo, Ocean="Atl")
 SampleInfo <-SampleInfo[,c(1,5,2,3,4)]
 
-setPop(og.wfpopLD)<-~Ocean
-gen_oce <-seppop(og.wfpopLD) #the ocean should be all individuals -right? 
+setPop(wfpopLD)<-~Ocean
+gen_oce <-seppop(wfpopLD) #ALL for the bays should be only YOY2016
 
 #update - bays with 2016 YOY only 
 setPop(wfpopLD)<-~Bay
 gen_bay <-seppop(wfpopLD) #here bays are all ONLY 2016 YOY
 
-setPop(og.wfpopLD)<-~Bay/Con
-gen_con <-seppop(wfpopLD)
+#update Mattituck only (no 2015, and no unidentified adults)
+setPop(wfpop.mtshi)<-~Bay/Year/Con
+genMt <-popsub(wfpop.mtshi, sublist=c("Mt_2016_1","Mt_2016_2","Mt_adults_3", "Mt_adults_4"))
+gen_Mt <-seppop(genMt)
 
-setPop(og.wfpopLD)<-~Bay/Con/Year
-gen_bayconyear <-seppop(og.wfpopLD)
-
-setPop(og.wfpopLD)<-~Year
-gen_year <- seppop(og.wfpopLD)
-
-setPop(og.wfpopLD)<-~Bay/Year
-gen_bayyear <- seppop(og.wfpopLD)
+#update Shinnecock only
+genShi <-popsub(wfpop.mtshi, sublist=c("Shin_2016_1", "Shin_2017_1","Shin_2016_2", "Shin_2017_2"))
+gen_Shi <-seppop(genShi)
 
 gen_grp <-c(gen_oce,
             gen_bay,
-            gen_con,
-            gen_bayconyear,
-            gen_year)
+            gen_Mt,
+            gen_Shi)
 gen_grp[["ALL"]] <-og.wfpopLD
 
 # calculate allelic richness/diversity stats ====
@@ -221,31 +200,15 @@ write.csv(loc_stats,file="./diversity_stats/diversity_output_files/YOY16_bay/loc
 pivlocstats <-pivot_longer(loc_stats,cols = c("N_ALLELES", "SIMPSON_IDX", "EVENNESS","Ho","Hs","Ht","Fis","SHANNON_IDX","STODD_TAYLOR_IDX"),
                              names_to="variable", values_to="value")
 sumlocstats <-ddply(pivlocstats, GRP~variable, summarize, meanvar=mean(value), sdvar=sd(value))
+write.csv(pivlocstats,file="./diversity_stats/diversity_output_files/YOY16_bay/pivlocstats17.csv")
 write.csv(sumlocstats,file="./diversity_stats/diversity_output_files/YOY16_bay/sumlocstats17.csv")
-
-allcolors <-c("grey","#d0d1e6","#a6bddb","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#1c9099","#016450","#016450","#016450","#016450","#016450")
-
-
-#Giant barplot
-pivlocstats %>%
-  mutate(GRP=as.factor(GRP)) %>%
-  filter(variable %in% c("N_ALLELES", "SIMPSON_IDX", "EVENNESS","Ho","Hs","Ht","Fis")) %>%
-  filter(GRP %in% c("Atl","Nap","Mor","Jam","Shin","Shin_1_2016","Shin_2_2016","Shin_1_2017","Shin_2_2017","Mt","Mt_3","Mt_4","Mt_1_2015","Mt_2_2015","Mt_1_2016","Mt_2_2016"))%>%
-  ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
-  geom_boxplot(aes(fill=GRP))+ 
-  scale_fill_manual(name = "GRP",values = allcolors)+
-  coord_flip()+ 
-  facet_wrap(~variable, scales="free_x", nrow=2)+ 
-  theme(axis.text = element_text(size = 10),axis.title = element_text(size = 12),panel.background = element_rect(fill = 'white', colour = 'black'),
-        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('pivlocstats17.png', path="./diversity_stats/diversity_figs/YOY16", width = 12, height = 5)
+#############################################################################################################
 
 #create different loc stats groups for testing. 
 loc_stats_bay <-filter(loc_stats, GRP %in% c("Nap","Mor","Jam","Shin","Mt"))
-
-#bay melt
 meltlocstats_bay <-pivot_longer(loc_stats_bay,cols = c("N_ALLELES", "SIMPSON_IDX", "EVENNESS","Ho","Hs","Ht","Fis","SHANNON_IDX","STODD_TAYLOR_IDX"),
                                 names_to="variable", values_to="value")
+write.csv(meltlocstats_bay, file="./diversity_stats/diversity_output_files/YOY16_bay/meltlocstats_bay.csv")
 
 
 meltlocstats2 <-filter(loc_stats, GRP %in% c("Nap","Mor","Jam","Shin","Mt","ALL"))%>%
@@ -260,97 +223,6 @@ g2h_all <-genind2hierfstat(wfpopLD)
 g2hall <-basic.stats(g2h_all)
 global <-as.data.frame(g2hall$perloc) %>% tibble::rownames_to_column("locus") %>% mutate(Bay="ALL")
 write.csv(global,file="./diversity_stats/diversity_output_files/YOY16_bay/basic_stats17.csv" )
-
-setPop(wfpopLD) <-~Bay
-g2h_bay <-genind2hierfstat(wfpopLD, pop=wfpopLD@pop)
-
-wfshin <- popsub(wfpopLD, sublist=c("Shin"))  #%>% missingno("geno", cutoff=0.10)
-wfshinh <- genind2hierfstat(wfshin) 
-wfshi<-basic.stats(wfshinh)
-#wfshi <-diff_stats(wfshin)
-wfnap <- popsub(wfpopLD, sublist=c("Nap"))
-wfmor <- popsub(wfpopLD, sublist=c("Mor"))
-
-##### Box and whisker plots for diversity stats #####
-drabcolors <-c("#d0d1e6","#a6bddb", "#67a9cf", "#1c9099", "#016450")
-
-#Nei's gene diversity
-meltlocstats_bay %>%
-  filter(variable == "Ht") %>%
-  ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
-  geom_boxplot(aes(fill=GRP))+ 
-  scale_fill_manual(name = "Bay",values = drabcolors)+
-  coord_flip()+ 
-  #ylim(0.7,1.0)+
-  xlab(' ')+ylab("Nei's Gene Diversity")+
-  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
-        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('nei_bay17.png', path="./diversity_stats/diversity_figs/YOY16", width = 10, height = 5)
-
-#Inbreeding coefficient
-meltlocstats_bay %>%
-  filter(variable == "Fis") %>%
-  ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
-  geom_boxplot(aes(fill=GRP))+ 
-  scale_fill_manual(name = "Bay",values = drabcolors)+
-  coord_flip()+ 
-  #ylim(0.7,1.0)+
-  xlab(' ')+ylab("Fis")+
-  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
-        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('FIS_bay17.png', path="./diversity_stats/diversity_figs/YOY16", width = 10, height = 5)
-
-#Evenness
-meltlocstats_bay %>%
-  filter(variable == "EVENNESS") %>%
-  ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
-  geom_boxplot(aes(fill=GRP))+ 
-  scale_fill_manual(name = "Bay",values = drabcolors)+
-  coord_flip()+ 
-  #ylim(0.7,1.0)+
-  xlab(' ')+ylab("Evenness")+
-  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
-        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('Evenness_bay17.png', path="./diversity_stats/diversity_figs/YOY16", width = 10, height = 5)
-
-#Shannon index
-meltlocstats_bay %>%
-  filter(variable == "SHANNON_IDX") %>%
-  ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
-  geom_boxplot(aes(fill=GRP))+ 
-  scale_fill_manual(name = "Bay",values = drabcolors)+
-  coord_flip()+ 
-  #ylim(0.7,1.0)+
-  xlab(' ')+ylab("Shannon Index")+
-  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
-        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('Shannon_idxbay17.png', path="./diversity_stats/diversity_figs/YOY16", width = 10, height = 5)
-
-#Expected heterozygosity
-meltlocstats_bay %>%
-  filter(variable == "Hs") %>%
-  ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
-  geom_boxplot(aes(fill=GRP))+ 
-  scale_fill_manual(name = "Bay",values = drabcolors)+
-  coord_flip()+ 
-  #ylim(0.7,1.0)+
-  xlab(' ')+ylab("Expected Heterozygosity")+
-  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
-        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('Hsbay17.png', path="./diversity_stats/diversity_figs/YOY16", width = 10, height = 5)
-
-#Observed heterozygosity
-meltlocstats_bay %>%
-  filter(variable == "Ho") %>%
-  ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
-  geom_boxplot(aes(fill=GRP))+ 
-  scale_fill_manual(name = "Bay",values = drabcolors)+
-  coord_flip()+ 
-  #ylim(0.7,1.0)+
-  xlab(' ')+ylab("Observed Heterozygosity")+
-  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
-        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('Hobay17.png', path="./diversity_stats/diversity_figs/YOY16", width = 10, height = 5)
 
 
 ######## CALCULATE RAREFIED ALLELIC RICHNESS ----
@@ -379,28 +251,29 @@ df <- as.data.frame(df$Ar) %>%
 ar <- left_join(ar, df)
 write.csv(ar, "./diversity_stats/diversity_output_files/YOY16_bay/rarefied_allelecount.csv")
 
+## melt AR MATTITUCK $ SHINNECOCK no yoy 2015
+setPop(wfpop.mtshi) <- ~Bay/Year/Con
+dat <- hierfstat:::genind2hierfstat(wfpop.mtshi, pop = wfpop.mtshi@pop)
+df <- allelic.richness(dat,diploid = TRUE)
 
-#visualize results as boxplot. 
+# I am not sure how to tell which one is which in order to label the columns, but I assume they're in the same order as WFPOPLD?
+df <- as.data.frame(df$Ar) %>%
+  rownames_to_column("LOCUS") #%>%dplyr::rename(Nap = V1,Mor = V2,Jam = V3,Shin = V4,Mt = V5)
+ar_mtshi <- left_join(ar, df)
+write.csv(ar_mtshi, "./diversity_stats/diversity_output_files/YOY16_bay/rarefied_allelecount_ALLGROUPS.csv")
+
+meltarMT <-pivot_longer(ar_mtshi, cols=c("Mt_2016_1","Mt_2016_2","Mt_adults_3", "Mt_adults_4"),names_to="variable", values_to="value")
+meltarSHIN <-pivot_longer(ar_mtshi, cols=c("Shin_2016_1", "Shin_2017_1", "Shin_2016_2", "Shin_2017_2"),names_to="variable", values_to="value")
 
 #for rarified alleles, you have to make a new Allelic Richness analysis for each group you are comparing. 
 meltar2 <- pivot_longer(ar, cols=c("Mt","Shin","Nap","Mor","Jam","ALL"),names_to="variable", values_to="value")
 meltar3 <-filter(meltar2, variable != "ALL") #it doenst like it when you exclude the "all" category... 
 meltar_all <-filter(meltar2, variable == "ALL")
+write.csv(meltar3, file="./diversity_stats/diversity_output_files/YOY16_bay/meltar3.csv")
 
-meltar3 %>%
-  #filter(variable !="ALL")%>%
-  mutate(GRP = as.factor(variable)) %>%
-  ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
-  geom_boxplot(aes(fill=GRP))+ 
-  scale_fill_manual(name = "Bay",values = drabcolors)+
-  coord_flip()+ 
-  #ylim(0.7,1.0)+
-  xlab(' ')+ylab("Rareified allele count")+
-  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
-        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('rareifiedallelesLD_bay17.png',path="./diversity_stats/diversity_figs/YOY16", width = 10, height = 5)
+###################################Private alleles #############################################
 
-##Private alleles
+#Between Bays
 df <-genind2df(wfpopLD, usepop = TRUE, oneColPerAll = TRUE) 
 df$Ind <- rownames(df)
 df <-df[,c(36,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35)]
@@ -411,40 +284,104 @@ library("data.table")
 pA <-as.data.frame(privateAlleles(wf.g)) 
 setDT(pA,keep.rownames=TRUE)
 colnames(pA)[1] <- "LOCUS"
+write.csv(pA, "./diversity_stats/diversity_output_files/YOY16_bay/private_allelecount.csv")
 
+## melt AR MATTITUCK $ SHINNECOCK no yoy 2015 - 
+#do mattituck and Shinnecock seperately, separate from each other. 
+setPop(wfpop.mtshi) <- ~Bay/Year/Con
+#mattituck
+Mtpop <- popsub(wfpop.mtshi, sublist=c("Mt_2016_1","Mt_2016_2","Mt_adults_3", "Mt_adults_4"))
+df <-genind2df(Mtpop, usepop = TRUE, oneColPerAll = TRUE) 
+df$Ind <- rownames(df)
+df <-df[,c(36,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35)]
+df[df=="NA"] <- 0 # missing data must be 0
+wf.g <-df2gtypes(df,ploidy=2)
+pA_mt <-as.data.frame(privateAlleles(wf.g)) 
+setDT(pA_mt,keep.rownames=TRUE)
+colnames(pA_mt)[1] <- "LOCUS"
+
+#shinnecock
+Shipop <- popsub(wfpop.mtshi, sublist = c("Shin_2016_1", "Shin_2017_1", "Shin_2016_2", "Shin_2017_2"))
+df <-genind2df(Shipop, usepop = TRUE, oneColPerAll = TRUE) 
+df$Ind <- rownames(df)
+df <-df[,c(36,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35)]
+df[df=="NA"] <- 0 # missing data must be 0
+wf.g <-df2gtypes(df,ploidy=2)
+pA_shi <-as.data.frame(privateAlleles(wf.g)) 
+setDT(pA_shi,keep.rownames=TRUE)
+colnames(pA_shi)[1] <- "LOCUS"
+
+pA_mtshi <-bind_rows(pA_mt, pA_shi)
+write.csv(pA_mtshi, "./diversity_stats/diversity_output_files/YOY16_bay/PrivateAlleles_ALLGROUPS.csv")
+
+meltPA_MT <-pivot_longer(pA_mtshi, cols=c("Mt_2016_1","Mt_2016_2","Mt_adults_3", "Mt_adults_4"),names_to="variable", values_to="value")
+meltPA_SHIN <-pivot_longer(pA_mtshi, cols=c("Shin_2016_1", "Shin_2017_1", "Shin_2016_2", "Shin_2017_2"),names_to="variable", values_to="value")
 meltpA <- pivot_longer(pA, cols=c("Mt","Shin","Nap","Mor","Jam"),names_to="variable", values_to="value")
 
-meltpA %>%
-  mutate(GRP = as.factor(variable)) %>%
-  ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
-  geom_boxplot(aes(fill=GRP))+ 
-  scale_fill_manual(name = "Bay",values = drabcolors)+
-  coord_flip()+ 
-  #ylim(0.7,1.0)+
-  xlab(' ')+ylab("Private alleles")+
-  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
-        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('privateallelesLD_bay17.png',path="./diversity_stats/diversity_figs/YOY16", width = 10, height = 5)
 
+#################### Inbreeding - Internal Relatedness ##############################
+library("Rhh")
+setPop(wfpopLD) <-~Bay
+#wfp <-genind2df(wfpopLD)
+wfp <-genind2df(wfpopLD, usepop = TRUE, oneColPerAll = TRUE) %>% tibble::rownames_to_column("Ind")
+wfp <-mutate_at(wfp,vars(-pop, -Ind),as.numeric)
+wfp <-mutate_at(wfp,vars(-pop, -Ind),as.numeric)
+wfp[is.na(wfp)] <- 0
 
+rel <- dplyr::select(wfp, -1, -2)
+rel <-ir(rel)
+#rel <-ir(wfp[,-1])
+
+#rel
+rel2 <-as.data.frame(rel)
+names(rel2) <-c("IR")
+rel2 <-cbind(wfp,rel2) 
+rel2 <-dplyr::select(rel2,Ind,pop,IR)
+
+##### Internal relatedness mattituck ###########
+setPop(Mtpop) <-~Bay/Year/Con
+wfp <-genind2df(Mtpop, usepop = TRUE, oneColPerAll = TRUE) %>% tibble::rownames_to_column("Ind")
+wfp <-mutate_at(wfp,vars(-pop, -Ind),as.numeric)
+wfp <-mutate_at(wfp,vars(-pop, -Ind),as.numeric)
+wfp[is.na(wfp)] <- 0
+rel <- dplyr::select(wfp, -1, -2)
+rel <-ir(rel)
+relMt <-as.data.frame(rel)
+names(relMt) <-c("IR")
+relMt <-cbind(wfp,relMt) 
+relMt <-dplyr::select(relMt,Ind,pop,IR)
+
+##### Internal relatedness Shinnecock ###########
+setPop(Shipop) <-~Bay/Year/Con
+wfp <-genind2df(Shipop, usepop = TRUE, oneColPerAll = TRUE) %>% tibble::rownames_to_column("Ind")
+wfp <-mutate_at(wfp,vars(-pop, -Ind),as.numeric)
+wfp <-mutate_at(wfp,vars(-pop, -Ind),as.numeric)
+wfp[is.na(wfp)] <- 0
+rel <- dplyr::select(wfp, -1, -2)
+rel <-ir(rel)
+relShi <-as.data.frame(rel)
+names(relShi) <-c("IR")
+relShi <-cbind(wfp,relShi) 
+relShi <-dplyr::select(relShi,Ind,pop,IR)
+
+rel2 <-bind_rows(rel2,relMt,relShi)
+ddply(rel2, ~pop, summarize, meanir=mean(IR))
+
+write.csv(rel2, "./diversity_stats/diversity_output_files/YOY16_bay/IR.csv")
+
+######################################### TABLE 2 ###################################################################
+#we will try doing this again later. 
+#t2bays <-filter(sumlocstats,GRP %in% c("Atl","Jam","Mor","Mt","Nap","Shin"))%>%pivot_wider(names_from = "variable", values_from = c("meanvar","sdvar"))
+#t2bays <-t(t2bays)
+#t2bays <-t2bays[c("meanvar_Ho","sdvar_Ho","meanvar_Hs","sdvar_Hs","meanvar_Ht","sdvar_Ht"),]
 
 ######## TEST FOR SIGNIFICANT DIFFERENCES#####
 # need to use Friedman's test for global test and Wilcoxon signed rank for pairwise tests 
 # to test symmetry of numeric repeated measurements (stastic per locus) in block design
 # Example using gene diversity (expected heterozygosity by estuary)
 
-#Shannon's way - go to the code she does it a little differently.  
-# importantly she removes rows with NA from the data set, but we don't have any. 
-
-#the different levels we have to work with are:
-    #loc_stats_bay <- bays
-    #loc_stats_BYC <- bay year con
-    #loc_stats_MT <-bay con for mattituck only, no group 5 (unidentified adults)
-    #loc_stats_shin <- bay year con shin
-    #loc_stats_16 <- 2016 YOY at bay level. 
-
 #set level to test for friedmans
-fdata <- loc_stats_bay
+fdata <- loc_stats_bay #Is the same here as loc_stats_16 because we got rid of the other individuals at the beginning. 
 
 
 #####Friedman's test for Global heterogeneity#####
@@ -454,16 +391,70 @@ c<-friedman.test(Ht~GRP | LOCUS, data= fdata) #Ht
 d<-friedman.test(Fis~GRP | LOCUS, data= fdata) #Fis
 e<-friedman.test(SHANNON_IDX~GRP | LOCUS, data= fdata) 
 f<-friedman.test(value~variable | LOCUS, data= meltar3) #rareified alleles #come back to this one.... 
-#h4 from before. 
 g<-friedman.test(hobs~Bay | locus, data=h4)
+h <-friedman.test(value~variable | LOCUS, data= meltpA) #private alleles
+i <-friedman.test(SIMPSON_IDX~GRP| LOCUS, data= fdata)
 
-p.vals <-c(a$p.value, b$p.value,c$p.value,d$p.value,e$p.value,f$p.value,g$p.value)
-comparisons <-c(a$data.name,b$data.name,c$data.name,d$data.name,e$data.name,f$data.name,g$data.name)
+p.vals <-c(a$p.value, b$p.value,c$p.value,d$p.value,e$p.value,f$p.value,g$p.value, h$p.value, i$p.value)
+comparisons <-c(a$data.name,b$data.name,c$data.name,d$data.name,e$data.name,f$data.name,g$data.name, h$data.name, i$data.name)
 
-friedmans_tests <-cbind(comparisons, p.vals)%>%as.data.frame
+friedmans_tests <-cbind(comparisons, p.vals)%>%as.data.frame%>%mutate(p.vals=as.numeric(p.vals))
+friedmans_tests$chi_sq <-c(a$statistic, b$statistic,c$statistic,d$statistic,e$statistic,f$statistic,g$statistic, h$statistic, i$statistic)
+friedmans_tests <-mutate(friedmans_tests, pval_adj =p.adjust(p.vals, method="BH"))
 write.csv(friedmans_tests,"./diversity_stats/diversity_output_files/YOY16_bay/friedmanstests.csv")
 
-#######Wilcoxon tests #####
+########### Friedman test Mattituck (NO 2015 yoy) ########################
+loc_stats_MT <- filter(loc_stats, GRP %in% c("Mt_2016_1","Mt_2016_2","Mt_adults_3","Mt_adults_4"))
+fdata <- loc_stats_MT #Is the same here as loc_stats_16 because we got rid of the other individuals at the beginning. 
+
+#####Friedman's test for Global heterogeneity#####
+a<-friedman.test(Hs~GRP | LOCUS, data= fdata) #Hs - fixing this. 
+b<-friedman.test(EVENNESS~GRP | LOCUS, data= fdata) #evenness
+c<-friedman.test(Ht~GRP | LOCUS, data= fdata) #Ht
+d<-friedman.test(Fis~GRP | LOCUS, data= fdata) #Fis
+e<-friedman.test(SHANNON_IDX~GRP | LOCUS, data= fdata) 
+i <-friedman.test(SIMPSON_IDX~GRP| LOCUS, data= fdata)
+
+f<-friedman.test(value~variable | LOCUS, data= meltarMT) #rareified alleles 
+h <-friedman.test(value~variable | LOCUS, data= meltPA_MT) #private all
+
+p.vals <-c(a$p.value, b$p.value,c$p.value,d$p.value,e$p.value,f$p.value,h$p.value, i$p.value)
+comparisons <-c(a$data.name,b$data.name,c$data.name,d$data.name,e$data.name,f$data.name, h$data.name, i$data.name)
+
+friedmans_tests <-cbind(comparisons, p.vals)%>%as.data.frame%>%mutate(p.vals=as.numeric(p.vals))
+friedmans_tests$chi_sq <-c(a$statistic, b$statistic,c$statistic,d$statistic,e$statistic,f$statistic,h$statistic, i$statistic)
+friedmans_tests <-mutate(friedmans_tests, pval_adj =p.adjust(p.vals, method="BH"))
+write.csv(friedmans_tests,"./diversity_stats/diversity_output_files/YOY16_bay/friedmanstests_MTno2015.csv")
+
+
+########### Friedman test Shinnecock, Should be the same as before ########################
+loc_stats_SHI <- filter(loc_stats, GRP %in% c("Shin_2016_1", "Shin_2017_1", "Shin_2016_2", "Shin_2017_2"))
+fdata <- loc_stats_SHI #Is the same here as loc_stats_16 because we got rid of the other individuals at the beginning. 
+
+#####Friedman's test for Global heterogeneity#####
+a<-friedman.test(Hs~GRP | LOCUS, data= fdata) #Hs - fixing this. 
+b<-friedman.test(EVENNESS~GRP | LOCUS, data= fdata) #evenness
+c<-friedman.test(Ht~GRP | LOCUS, data= fdata) #Ht
+d<-friedman.test(Fis~GRP | LOCUS, data= fdata) #Fis
+e<-friedman.test(SHANNON_IDX~GRP | LOCUS, data= fdata) 
+i <-friedman.test(SIMPSON_IDX~GRP| LOCUS, data= fdata)
+
+f<-friedman.test(value~variable | LOCUS, data= meltarSHIN) #rareified alleles 
+h <-friedman.test(value~variable | LOCUS, data= meltPA_SHIN) #private all
+
+p.vals <-c(a$p.value, b$p.value,c$p.value,d$p.value,e$p.value,f$p.value,h$p.value, i$p.value)
+comparisons <-c(a$data.name,b$data.name,c$data.name,d$data.name,e$data.name,f$data.name, h$data.name, i$data.name)
+
+friedmans_tests <-cbind(comparisons, p.vals)%>%as.data.frame%>%mutate(p.vals=as.numeric(p.vals))
+friedmans_tests$chi_sq <-c(a$statistic, b$statistic,c$statistic,d$statistic,e$statistic,f$statistic,h$statistic, i$statistic)
+friedmans_tests <-mutate(friedmans_tests, pval_adj =p.adjust(p.vals, method="BH"))
+write.csv(friedmans_tests,"./diversity_stats/diversity_output_files/YOY16_bay/friedmanstests_shin.csv")
+
+
+
+
+####################################################################################################################
+######################Wilcoxon tests #####
 #tell us which groups are significantly different. 
 # you have to set which level you are comparing. 
   #the different levels we have to work with are:
@@ -472,6 +463,9 @@ write.csv(friedmans_tests,"./diversity_stats/diversity_output_files/YOY16_bay/fr
     #loc_stats_MT <-bay con for mattituck only, no group 5 (unidentified adults)
     #loc_stats_shin <- bay year con shin
     #loc_stats_16 <- 2016 YOY at bay level. 
+
+#################### WILCOX TEST YOY 2016 BAY #######################################################
+
 
 llocstats <- loc_stats_bay ## This IS 2016 yoy at bay level because we previously removed the other groups. 
 #list of all the different possible pairs
@@ -515,7 +509,7 @@ for(p in 1:n){
   results_list[[p]] <- df #}#, error=function(e){})
 }
 #results_list <-results_list[-which(sapply(results_list, is.null))]
-results_nei<-bind_rows(results_list)
+results_nei<-bind_rows(results_list)%>%mutate(padj=p.adjust(p.value, method="BH"))
 
 #Fis
 results_list <-list()
@@ -538,7 +532,7 @@ for(p in 1:n){
   results_list[[p]] <- df #}#, error=function(e){})
 }
 #results_list <-results_list[-which(sapply(results_list, is.null))]
-results_fis<-bind_rows(results_list)
+results_fis<-bind_rows(results_list)%>%mutate(padj=p.adjust(p.value, method="BH"))
 
 #EVENNESS
 results_list <-list()
@@ -561,9 +555,9 @@ for(p in 1:n){
   results_list[[p]] <- df #}#, error=function(e){})
 }
 #results_list <-results_list[-which(sapply(results_list, is.null))]
-results_even<-bind_rows(results_list)
+results_even<-bind_rows(results_list)%>%mutate(padj=p.adjust(p.value, method="BH"))
 
-#SHANNON_IDX
+#SIMPSON_IDX
 results_list <-list()
 for(p in 1:n){
   #tryCatch({
@@ -573,109 +567,18 @@ for(p in 1:n){
     mutate(GRP = ordered(GRP, levels = pair),
            LOCUS = as.factor(LOCUS)) %>%
     droplevels()
-  wilcox <- wilcoxsign_test(SHANNON_IDX ~ GRP | LOCUS,    ###### MUST REMEMBER TO CHANGE WHAT TEST YOU ARE DOING. 
+  wilcox <- wilcoxsign_test(SIMPSON_IDX ~ GRP | LOCUS,    ###### MUST REMEMBER TO CHANGE WHAT TEST YOU ARE DOING. 
                             data = temp,zero.method = "Pratt")
   df <- data.frame("pop1" = pair[1], 
                    "pop2" = pair[2], 
                    "stat" = as.numeric(wilcox@statistic@teststatistic), 
                    "p-value" = as.numeric(pvalue(wilcox)),
-                   "test" = "SHANNON_IDX") 
+                   "test" = "SIMPSON_IDX") 
   #if(!is.null(df)){
   results_list[[p]] <- df #}#, error=function(e){})
 }
 #results_list <-results_list[-which(sapply(results_list, is.null))]
-results_shannon<-bind_rows(results_list)
-
-#combine
-results <-bind_rows(results_nei, results_fis, results_even, results_shannon)
-#results <- results %>% dplyr::select(-temp)
-results <-mutate(results, bonferroni=0.05/10) # number of pairwise comparisons ####CHECK THIS
-results <-mutate(results, significance = ifelse(p.value>=bonferroni,"not significant","significant"))
-write.csv(results,file="./diversity_stats/diversity_output_files/YOY16_bay/wilcox.csv")
-
-#heatmap of results (new way)
-results <- mutate(results, starsig=ifelse(significance=="significant",round(p.value,4),NA),test.statistic=abs(stat))
-results<-mutate(results, p_value = cut(p.value, breaks=c(0,0.005, 0.01,0.05,0.1,0.5,1)))
-cols <- c("(0,0.005]"="#034e7b", "(0.005,0.01]" = "#045a8d", "(0.01,0.05]" = "#2b8cbe", "(0.05,0.1]" = "#74a9cf", "(0.1,0.5]"  = "#a6bddb", "(0.5,1]"="#d0d1e6")
-
-#NEI Heatmap. 
-#delete duplicate pairs to form the half grid of the heatmap. 
-results_nei <-filter(results, test=="Ht") %>%
-  arrange(test.statistic) %>% unique() %>% 
-  mutate(pair1 = pmin(pop1,pop2), pair2 =pmax(pop1,pop2)) %>% arrange(pair1)
-toDelete <- seq(1, nrow(results_nei), 2)
-results_nei <- results_nei[ toDelete ,]
-
-# Filled by test statistic: NEI - shows graphical options. 
-results_nei %>%
-  ggplot(aes(x = pair1, y = pair2))+
-  #geom_tile(aes(fill=test.statistic), show.legend = TRUE)+ # Filled by test statistic
-  #geom_tile(aes(fill=p.value), show.legend = TRUE)+ #filled  by p.value (gradient)
-  geom_tile(aes(fill=p_value), show.legend = TRUE)+ #filled  by p_value (discrete)
-  #scale_fill_gradient(low ="#023858" , high = "#a6bddb", space = "Lab", na.value = "white", guide = "colourbar", aesthetics = "fill")+ #gradient fill
-  scale_fill_manual(values=cols)+
-  geom_text(aes(label = round(p.value,3),color=significance), size=5)+
-  scale_color_manual(values=c("white","red"), guide=FALSE)+
-  xlab("")+ylab("")+
-  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-ggsave('neiBaytile17.png',path="./diversity_stats/diversity_figs/YOY16", width = 10, height = 7)
-
-#FIS heatmap
-#delete duplicate pairs to form the half grid of the heatmap. 
-results_Fis <-filter(results, test=="Fis") %>%
-  arrange(test.statistic) %>% unique() %>% 
-  mutate(pair1 = pmin(pop1,pop2), pair2 =pmax(pop1,pop2)) %>% arrange(pair1)
-toDelete <- seq(1, nrow(results_Fis), 2)
-results_Fis <- results_Fis[ toDelete ,]
-
-# Filled by test statistic: FIS
-results_Fis %>%
-  ggplot(aes(x = pair1, y = pair2))+
-  geom_tile(aes(fill=p_value), show.legend = TRUE)+ #filled  by p_value (discrete)
-  scale_fill_manual(values=cols)+
-  geom_text(aes(label = round(p.value,3),color=significance), size=5)+
-  scale_color_manual(values=c("white","red"), guide=FALSE)+
-  xlab("")+ylab("")+
-  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-ggsave('FisBaytile17.png',path="./diversity_stats/diversity_figs/YOY16", width = 10, height = 7)
-
-#EVENNESS heatmap
-#delete duplicate pairs to form the half grid of the heatmap. 
-results_even <-filter(results, test=="EVENNESS") %>%
-  arrange(test.statistic) %>% unique() %>% 
-  mutate(pair1 = pmin(pop1,pop2), pair2 =pmax(pop1,pop2)) %>% arrange(pair1)
-toDelete <- seq(1, nrow(results_even), 2)
-results_even <- results_even[ toDelete ,]
-
-# Filled by test statistic: evenness
-results_even %>%
-  ggplot(aes(x = pair1, y = pair2))+
-  geom_tile(aes(fill=p_value), show.legend = TRUE)+ #filled  by p_value (discrete)
-  scale_fill_manual(values=cols)+
-  geom_text(aes(label = round(p.value,3),color=significance), size=5)+
-  scale_color_manual(values=c("white","red"), guide=FALSE)+
-  xlab("")+ylab("")+
-  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-ggsave('evennessBaytile17.png',path="./diversity_stats/diversity_figs/YOY16", width = 10, height = 7)
-
-#shannons heatmap
-#delete duplicate pairs to form the half grid of the heatmap. 
-results_shannon <-filter(results, test=="SHANNON_IDX") %>%
-  arrange(test.statistic) %>% unique() %>% 
-  mutate(pair1 = pmin(pop1,pop2), pair2 =pmax(pop1,pop2)) %>% arrange(pair1)
-toDelete <- seq(1, nrow(results_shannon), 2)
-results_shannon <- results_shannon[ toDelete ,]
-
-# Filled by test statistic: evenness
-results_shannon %>%
-  ggplot(aes(x = pair1, y = pair2))+
-  geom_tile(aes(fill=p_value), show.legend = TRUE)+ #filled  by p_value (discrete)
-  scale_fill_manual(values=cols)+
-  geom_text(aes(label = round(p.value,3),color=significance), size=5)+
-  scale_color_manual(values=c("white","red"), guide=FALSE)+
-  xlab("")+ylab("")+
-  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-ggsave('shannonBaytile17.png',path="./diversity_stats/diversity_figs/YOY16", width = 10, height = 7)
+results_simpson<-bind_rows(results_list)%>%mutate(padj=p.adjust(p.value, method="BH"))
 
 
 ##Wilcoxon test for rarified alleles##
@@ -713,127 +616,186 @@ for(p in 1:n){
                    "stat" = as.numeric(wilcox@statistic@teststatistic), 
                    "p-value" = as.numeric(pvalue(wilcox)))
   results_ar[[p]] <-df}
-  results_ar <- bind_rows(results_ar)
+results_ar <- bind_rows(results_ar)%>%mutate(test="AR",padj=p.adjust(p.value, method="BH"))
 
-results_ar <-mutate(results_ar, bonferroni=0.05/10)
-results_ar <-mutate(results_ar, significance = ifelse(p.value>=bonferroni,"not significant","significant")) %>% mutate(starsig=ifelse(significance=="significant",round(p.value,4),NA),test.statistic=abs(stat))
-results_ar<-mutate(results_ar, p_value = cut(p.value, breaks=c(0,0.005, 0.01,0.05,0.1,0.5,1)))
-cols <- c("(0,0.005]"="#034e7b", "(0.005,0.01]" = "#045a8d", "(0.01,0.05]" = "#2b8cbe", "(0.05,0.1]" = "#74a9cf", "(0.1,0.5]"  = "#a6bddb", "(0.5,1]"="#d0d1e6")
+#results_ar <-arrange(results_ar, test.statistic) %>% unique() %>% 
+  #mutate(pair1 = pmin(pop1,pop2), pair2 =pmax(pop1,pop2)) %>% arrange(pair1, pair2)
+  #
 
-results_ar <-arrange(results_ar, test.statistic) %>% unique() %>% 
-  mutate(pair1 = pmin(pop1,pop2), pair2 =pmax(pop1,pop2)) %>% arrange(pair1, pair2)
-#toDelete <- seq(1, nrow(results_ar), 2)
-#results_ar <- results_ar[ toDelete ,]
+#### Wilcoxon test for private alleles
+#list of all the different possible pairs
+comp <- as.character(unique(meltpA$variable))  
+pairs <- expand.grid(comp, comp) %>%
+  filter(!Var1 == Var2) %>%
+  rownames_to_column("PAIR") %>%
+  split(.$PAIR) %>%
+  purrr::map(function(x){
+    x %>%
+      dplyr::select(-PAIR) %>%
+      gather(key = meltpA, value = variable, 1:2) %>%
+      dplyr::select(-meltpA)})
+meltpA <-as.data.frame(meltpA) %>% mutate(GRP=as.factor(variable))
+# empty data frame for results
+results_pA <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), c("pop1", "pop2", "stat", "temp", "p.value"))
+n <- as.numeric(length(pairs))
 
-# plot heatmap of results ====
-results_ar %>%
-  ggplot(aes(x = pair1, y = pair2))+
-  geom_tile(aes(fill=p_value), show.legend = TRUE)+ #filled  by p_value (discrete)
-  scale_fill_manual(values=cols)+
-  geom_text(aes(label = round(p.value,3),color=significance), size=5)+
-  scale_color_manual(values=c("white","red"), guide=FALSE)+
-  xlab("")+ylab("")+
-  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-ggsave('rariefied_allelesBaytile17.png',path="./diversity_stats/diversity_figs/YOY16", width = 10, height = 7)
+library("coin")
+# loop over pairs
+results_pA <-list()
+for(p in 1:n){
+  pair <- pairs[[p]]$variable
+  temp <- meltpA %>%
+    dplyr::filter(variable %in% pair) %>%
+    mutate(GRP = ordered(variable, levels = pair),
+           LOCUS = as.factor(LOCUS)) %>%
+    droplevels()
+  wilcox <- wilcoxsign_test(value ~ GRP | LOCUS,    ###### MUST REMEMBER TO CHANGE WHAT TEST YOU ARE DOING. 
+                            data = temp,
+                            zero.method = "Pratt")
+  df <- data.frame("pop1" = pair[1], 
+                   "pop2" = pair[2], 
+                   "stat" = as.numeric(wilcox@statistic@teststatistic), 
+                   "p-value" = as.numeric(pvalue(wilcox)))
+  results_pA[[p]] <-df}
+results_pA <- bind_rows(results_pA)%>%mutate(test="PA", padj=p.adjust(p.value, method="BH"))
 
+#combine
+results <-bind_rows(results_nei, results_fis, results_even, results_simpson, results_ar, results_pA)
+results <-mutate(results, significance = ifelse(padj>=0.05,"not significant","significant"))
 
-##### FST ######
+write.csv(results,file="./diversity_stats/diversity_output_files/YOY16_bay/wilcox.csv")
 
-#Weir and Cockheram FST global & pairwise. - probably your best bet. 
-
-setPop(wfpopLD) <-~Bay
-wf.g2 <-genind2gtypes(wfpopLD)
-statFst(wf.g2)
-#popStruct <- popStructTest(wf.g2, stats = c(statFst, statFstPrime), nrep = 1000, quietly = TRUE)
-popStruct <- popStructTest(wf.g2, nrep = 1000, quietly = FALSE)
-popStruct
-
-#FST heatmap
-bayFST <-as.data.frame(popStruct$pairwise$result) %>% dplyr::select(strata.1, strata.2, Fst, Fst.p.val)
-
-# Filled by test statistic: NEI - shows graphical options. 
-bayFST %>%
-  ggplot(aes(x = strata.1, y = strata.2))+
-  geom_tile(aes(fill=Fst), show.legend = TRUE)+ # Filled by test statistic
-  #geom_tile(aes(fill=p.value), show.legend = TRUE)+ #filled  by p.value (gradient)
-  #geom_tile(aes(fill=p_value), show.legend = TRUE)+ #filled  by p_value (discrete)
-  #scale_fill_gradient(low ="#023858" , high = "#a6bddb", space = "Lab", na.value = "white", guide = "colourbar", aesthetics = "fill")+ #gradient fill
-  scale_fill_viridis_c()+
-  #scale_fill_manual(values=cols)+
-  geom_text(aes(label = round(Fst.p.val,3)), color="white", size=5)+
-  #scale_color_manual(values=c("white","red"), guide=FALSE)+
-  xlab("")+ylab("")+
-  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-ggsave('FSTBaytile17.png',path="./diversity_stats/diversity_figs/YOY16", width = 7, height = 7)
-
-#see previous scripts for other kinds of FST you can calculate
+library(multcompView)
 
 
-#### Inbreeding - Internal Relatedness ####
-library("Rhh")
-setPop(wfpopLD) <-~Bay
-#wfp <-genind2df(wfpopLD)
-wfp <-genind2df(wfpopLD, usepop = TRUE, oneColPerAll = TRUE) %>% tibble::rownames_to_column("Ind")
-wfp <-mutate_at(wfp,vars(-pop, -Ind),as.numeric)
-wfp[is.na(wfp)] <- 0
+############################################ STOPPED HERE #########################################
+#try this letter grouping
+results_nei2 <- unite(results_nei, grp, pop1, pop2)
 
-rel <- dplyr::select(wfp, -1, -2)
-rel <-ir(rel)
-#rel <-ir(wfp[,-1])
+multcompView::multcompLetters2(x=grp,data=results_nei2$padj)
 
-#rel
-rel2 <-as.data.frame(rel)
-names(rel2) <-c("IR")
-rel2 <-cbind(wfp,rel2) 
-rel2 <-dplyr::select(rel2,Ind,pop,IR)
+############################# WILCOX TESTS WITHIN BAYS MT AND SHIN #########################################
+# Private alleles in Mattituck
+#### Wilcoxon test for private alleles
+#list of all the different possible pairs
+comp <- as.character(unique(meltPA_MT$variable))  
+pairs <- expand.grid(comp, comp) %>%
+  filter(!Var1 == Var2) %>%
+  rownames_to_column("PAIR") %>%
+  split(.$PAIR) %>%
+  purrr::map(function(x){
+    x %>%
+      dplyr::select(-PAIR) %>%
+      gather(key = meltPA_MT, value = variable, 1:2) %>%
+      dplyr::select(-meltPA_MT)})
+meltPA_MT <-as.data.frame(meltPA_MT) %>% mutate(GRP=as.factor(variable))
+# empty data frame for results
+results_PA_MT <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), c("pop1", "pop2", "stat", "temp", "p.value"))
+n <- as.numeric(length(pairs))
 
-ddply(rel2, ~pop, summarize, meanir=mean(IR))
+library("coin")
+# loop over pairs
+results_PA_MT <-list()
+for(p in 1:n){
+  pair <- pairs[[p]]$variable
+  temp <- meltPA_MT %>%
+    dplyr::filter(variable %in% pair) %>%
+    mutate(GRP = ordered(variable, levels = pair),
+           LOCUS = as.factor(LOCUS)) %>%
+    droplevels()
+  wilcox <- wilcoxsign_test(value ~ GRP | LOCUS,    ###### MUST REMEMBER TO CHANGE WHAT TEST YOU ARE DOING. 
+                            data = temp,
+                            zero.method = "Pratt")
+  df <- data.frame("pop1" = pair[1], 
+                   "pop2" = pair[2], 
+                   "stat" = as.numeric(wilcox@statistic@teststatistic), 
+                   "p-value" = as.numeric(pvalue(wilcox)))
+  results_PA_MT[[p]] <-df}
+results_PA_MT <- bind_rows(results_PA_MT)%>%mutate(test="PA", padj=p.adjust(p.value, method="BH"))
 
-#barplot as before
-ggplot(rel2, aes(x=pop,y=IR))+
-  #ggplot(aes(x=fct_inorder(GRP),y=value))+
-  geom_boxplot(fill="lightgray")+ 
-  coord_flip()+ 
-  #ylim(0.7,1.0)+
-  xlab(' ')+ylab("IR")+theme_cowplot()+guides(fill = FALSE, colour = FALSE) 
-ggsave('IRld.png',path="./diversity_stats/diversity_figs/YOY16", width = 7, height = 7)
+# Private alleles in Shinnecock
+#### Wilcoxon test for private alleles
+#list of all the different possible pairs
+comp <- as.character(unique(meltPA_SHIN$variable))  
+pairs <- expand.grid(comp, comp) %>%
+  filter(!Var1 == Var2) %>%
+  rownames_to_column("PAIR") %>%
+  split(.$PAIR) %>%
+  purrr::map(function(x){
+    x %>%
+      dplyr::select(-PAIR) %>%
+      gather(key = meltPA_SHIN, value = variable, 1:2) %>%
+      dplyr::select(-meltPA_SHIN)})
+meltPA_SHIN <-as.data.frame(meltPA_SHIN) %>% mutate(GRP=as.factor(variable))
+# empty data frame for results
+results_PA_SHIN <- setNames(data.frame(matrix(ncol = 5, nrow = 0)), c("pop1", "pop2", "stat", "temp", "p.value"))
+n <- as.numeric(length(pairs))
 
-rel2 <- arrange(rel2,pop)
-drabcolors2 <-c("#d0d1e6","#a6bddb", "#67a9cf", "#1c9099", "#016450")
-rel2 <-mutate(rel2,name=fct_relevel(pop,"Jam","Mor","Mt","Nap","Shin"))
-rel2 %>%
-  ggplot(aes(x=fct_rev(name),y=IR),fill=name)+
-  geom_boxplot(aes(fill=name))+ 
-  scale_fill_manual(name = "Bay",values = drabcolors2)+
-  coord_flip()+ 
-  #ylim(0.7,1.0)+
-  xlab(' ')+ylab("Internal Relatedness")+
-  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
-        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('rel_bay17.png', path="./diversity_stats/diversity_figs/YOY16", width = 10, height = 5)
+library("coin")
+# loop over pairs
+results_PA_SHIN <-list()
+for(p in 1:n){
+  pair <- pairs[[p]]$variable
+  temp <- meltPA_SHIN %>%
+    dplyr::filter(variable %in% pair) %>%
+    mutate(GRP = ordered(variable, levels = pair),
+           LOCUS = as.factor(LOCUS)) %>%
+    droplevels()
+  wilcox <- wilcoxsign_test(value ~ GRP | LOCUS,    ###### MUST REMEMBER TO CHANGE WHAT TEST YOU ARE DOING. 
+                            data = temp,
+                            zero.method = "Pratt")
+  df <- data.frame("pop1" = pair[1], 
+                   "pop2" = pair[2], 
+                   "stat" = as.numeric(wilcox@statistic@teststatistic), 
+                   "p-value" = as.numeric(pvalue(wilcox)))
+  results_PA_SHIN[[p]] <-df}
+results_PA_SHIN <- bind_rows(results_PA_SHIN)%>%mutate(test="PA", padj=p.adjust(p.value, method="BH"))
+
+##### Simpson's index Shinnecock ####
+##### 
+llocstats <- loc_stats_SHI ## This loc stats shinnecock 
+#list of all the different possible pairs
+comp <- as.character(unique(llocstats$GRP))  
+pairs <- expand.grid(comp, comp) %>%
+  filter(!Var1 == Var2) %>%
+  rownames_to_column("PAIR") %>%
+  split(.$PAIR) %>%
+  purrr::map(function(x){
+    x %>%
+      dplyr::select(-PAIR) %>%
+      gather(key = llocstats, value = GRP, 1:2) %>%
+      dplyr::select(-llocstats)})
+#SIMPSON_IDX
+results_list <-list()
+for(p in 1:n){
+  #tryCatch({
+  pair <- pairs[[p]]$GRP
+  temp <- llocstats %>%
+    dplyr::filter(GRP %in% pair) %>%
+    mutate(GRP = ordered(GRP, levels = pair),
+           LOCUS = as.factor(LOCUS)) %>%
+    droplevels()
+  wilcox <- wilcoxsign_test(SIMPSON_IDX ~ GRP | LOCUS,    ###### MUST REMEMBER TO CHANGE WHAT TEST YOU ARE DOING. 
+                            data = temp,zero.method = "Pratt")
+  df <- data.frame("pop1" = pair[1], 
+                   "pop2" = pair[2], 
+                   "stat" = as.numeric(wilcox@statistic@teststatistic), 
+                   "p-value" = as.numeric(pvalue(wilcox)),
+                   "test" = "SIMPSON_IDX") 
+  #if(!is.null(df)){
+  results_list[[p]] <- df #}#, error=function(e){})
+}
+#results_list <-results_list[-which(sapply(results_list, is.null))]
+results_simpson_shin<-bind_rows(results_list)%>%mutate(padj=p.adjust(p.value, method="BH"))
+
+#within-bay results
+results_mtshi <-bind_rows(results_simpson_shin,results_PA_MT,results_PA_SHIN)
+write.csv(results_mtshi, file="./diversity_stats/diversity_output_files/YOY16_bay/wilcox_mtshi.csv")
 
 
-
-##### FINAL GIANT BARPLOT ########
-
-allcolors <-c("grey","#d0d1e6","#a6bddb","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#67a9cf","#1c9099","#016450","#016450","#016450","#016450","#016450")
-#Giant barplot
-pivlocstats %>%
-  mutate(GRP=as.factor(GRP)) %>%
-  filter(variable %in% c("N_ALLELES", "SIMPSON_IDX", "EVENNESS","Ho","Hs","Ht","Fis")) %>%
-  filter(GRP %in% c("Atl","Nap","Mor","Jam","Shin","Shin_1_2016","Shin_2_2016","Shin_1_2017","Shin_2_2017","Mt","Mt_3","Mt_4","Mt_1_2015","Mt_2_2015","Mt_1_2016","Mt_2_2016"))%>%
-  ggplot(aes(x=fct_rev(GRP),y=value),fill=GRP)+
-  geom_boxplot(aes(fill=GRP))+ 
-  scale_fill_manual(name = "GRP",values = allcolors)+
-  coord_flip()+ 
-  facet_wrap(~variable, scales="free_x", nrow=2)+ 
-  theme(axis.text = element_text(size = 10),axis.title = element_text(size = 12),panel.background = element_rect(fill = 'white', colour = 'black'),
-        panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('pivlocstats17.png', path="./diversity_stats/diversity_figs/YOY16", width = 12, height = 5)
-
-
+############################### IR ##################################
 # lets try testing for significant differences in mean IR for each bay pair with a wilcox sign test, idk why that's not ok... 
-comp <- as.character(unique(rel2$name))  
+comp <- as.character(unique(rel2$pop))  
 pairs <- expand.grid(comp, comp) %>%
   filter(!Var1 == Var2) %>%
   rownames_to_column("PAIR") %>%
@@ -939,22 +901,11 @@ t<-as.data.frame(t)
 
 pairwise.t.test(rel2$IR, rel2$name) #idk if this is right, but let's automate the t tests. 
 t<-mutate(t,pr.t=as.numeric(as.character(pr.t)))%>% mutate(p_value = cut(pr.t, breaks=c(0,0.005, 0.01,0.05,0.1,0.5,1)), significance=ifelse(pr.t < 0.005, "sig","not.sig"))
-cols <- c("(0,0.005]"="#034e7b", "(0.005,0.01]" = "#045a8d", "(0.01,0.05]" = "#2b8cbe", "(0.05,0.1]" = "#74a9cf", "(0.1,0.5]"  = "#a6bddb", "(0.5,1]"="#d0d1e6")
 t<- arrange(t, bay1) %>% mutate(bay1=as.character(bay1), bay2=as.character(bay2)) %>%mutate(pair1 = pmin(bay1,bay2), pair2 =pmax(bay1,bay2)) %>% arrange(pair1)
 
-t %>%
-  ggplot(aes(x = pair1, y = pair2))+
-  geom_tile(aes(fill=p_value), show.legend = TRUE)+ # Filled by test statistic
-  #geom_tile(aes(fill=p.value), show.legend = TRUE)+ #filled  by p.value (gradient)
-  #geom_tile(aes(fill=p_value), show.legend = TRUE)+ #filled  by p_value (discrete)
-  #scale_fill_gradient(low ="#023858" , high = "#a6bddb", space = "Lab", na.value = "white", guide = "colourbar", aesthetics = "fill")+ #gradient fill
-  scale_fill_manual(values=cols)+
-  geom_text(aes(label = round(pr.t,3),color=significance),size=5)+
-  scale_color_manual(values=c("white","red"), guide=FALSE)+
-  xlab("")+ylab("")+
-  theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),axis.text.x = element_text(angle = 90),panel.background = element_rect(fill = "white", colour = "black"))
-ggsave('IRBaytile17.png',path="./diversity_stats/diversity_figs/YOY16", width = 10, height = 7)
+write.csv(t,"./diversity_stats/diversity_output_files/YOY16_bay/IR_ttests.csv")
 
+######################################## DISTANCE ###############################################################
 #### Genetic Distance ####
 
 ## Tree's using provesti's distance
@@ -1003,7 +954,7 @@ class(Dgeo2) <- "dist"
 Dgeo2 
 
 
-ibd2 <-mantel.randtest(Dgen,Dgeo2, nrepet=1000)
+ibd2 <-mantel.randtest(Dgen,Dgeo2, nrepet=10000)
 ibd2
 plot(ibd2)
 library("MASS")
