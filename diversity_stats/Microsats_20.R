@@ -68,6 +68,8 @@ hexhobs <-as.data.frame(toto$Hexp-toto$Hobs)
 hexhobs <- tibble::rownames_to_column(hexhobs,"locus")
 names(hexhobs) <-c("locus","difference")
 
+bartlett.test(list(toto$Hexp,toto$Hobs))
+
 #by bay
 hh <- seppop(wfpopLD) %>% lapply(summary)
 

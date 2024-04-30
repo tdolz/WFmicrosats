@@ -1,4 +1,4 @@
-#Created January 16, 2024 from the script ClusterDAPCnew.R to reflect that we are only doing YOY 2016 now
+#Created April 30, 2024 from the script DAPC_yoy16.R to experiment with eliminating loci. 
 
 
 ### Here, in this sheet we are trying to do the kmeans tuning. 
@@ -24,8 +24,8 @@ setwd("/Users//tdolan/Documents//R-Github//WFmicrosats")
 
 ##### Formating the dataset #####
 # We are going to use the doubl0 version. 
-wfpop <- read.genalex("/Users//tdolan/Documents//R-Github//WFmicrosats/data/popcorrect_17_sept20204genalex_doubl0ABC.csv")
-wfpop4df <-read.csv("/Users//tdolan/Documents//R-Github//WFmicrosats/data/popcorrect_17_sept2020_doubl0ABC.csv", header = TRUE) #csv version 
+wfpop <- read.genalex("/Users//taradolan/Documents//R-Github//WFmicrosats/data/popcorrect_17_sept20204genalex_doubl0ABC.csv")
+wfpop4df <-read.csv("/Users//taradolan/Documents//R-Github//WFmicrosats/data/popcorrect_17_sept2020_doubl0ABC.csv", header = TRUE) #csv version 
 
 splitStrata(wfpop) <-~Ocean/Bay/Con/Year
 setPop(wfpop) <-~Bay
@@ -33,7 +33,7 @@ setPop(wfpop) <-~Bay
 #clean the dataset
 wfpopLD <-genclone2genind(wfpop)
 all_loci <- locNames(wfpopLD)# create vector of all loci
-removeloc <- c("WF06")# create vector containing loci to remove
+removeloc <- c("WF06", "WF12","PSY022")# create vector containing loci to remove
 keeploc <- setdiff(all_loci, removeloc)# create list of loci to keep
 wfpopLD <- wfpopLD[loc = keeploc]# filter loci in genind object
 wfpopLD <-wfpopLD %>% missingno("loci", cutoff=0.30) # removes loci where overall missingness > 30%, so WF01
@@ -66,7 +66,7 @@ drabcolors <-c("#d0d1e6","#a6bddb", "#67a9cf", "#1c9099", "#016450")
 setPop(wfbays16)<-~Bay
 df <- genind2df(wfbays16, usepop=TRUE, oneColPerAll = TRUE)
 df$Ind <-rownames(df)
-df <-df[,c(38,1:37)]
+df <-df[,c(ncol(df),1:ncol(df)-1)]
 df[df=="NA"] <- 0
 #make the strata.scheme
 wf.strata <-dplyr::select(df, Ind, pop)
@@ -104,7 +104,7 @@ scatter(bay_dapc, posi.da="none", bg="white",
 
 
 ################LOADINGS ##### see script "loading_plots.R" for visualizations 
-write.csv(bay_dapc$var.contr,file="./DAPC/DAPC_figs/bay16_loadings_apriori.csv")
+#write.csv(bay_dapc$var.contr,file="./DAPC/DAPC_figs/bay16_loadings_apriori.csv")
 
 ## Compare geographic regions of origin and assigned group memberships
 grp_membership <- as.data.frame(bay_dapc$posterior) %>% tibble::rownames_to_column("Ind") %>%
@@ -119,7 +119,7 @@ memprob <-ggplot(grp_membership, aes(x = fct_reorder(Ind,MEMBSHIP), y = MEMBSHIP
   theme(
     strip.background =element_rect(fill="transparent")
   );memprob
-ggsave("bays16_apriori_membship_100pc.png", width=10, height=5, path="/Users/tdolan/documents/R-Github/WFmicrosats/DAPC/DAPC_figs")
+#ggsave("bays16_apriori_membship_100pc.png", width=10, height=5, path="/Users/tdolan/documents/R-Github/WFmicrosats/DAPC/DAPC_figs")
 
 #SAVE grp_membership under new name for later. 
 grp_membership_ap <- mutate(grp_membership, nclust="ap")
@@ -153,7 +153,7 @@ BIC_100PC %>% filter(k < 21)%>%
   xlab("Number of clusters (k)")+ylab("BIC")+
   ggtitle("Optimal number of clusters as determined by BIC")+
   theme_classic()
-ggsave("yoy16_KvsBIC.png", width=5, height=5, path="/Users/tdolan/documents/R-Github/WFmicrosats/DAPC/DAPC_figs")
+#ggsave("yoy16_KvsBIC.png", width=5, height=5, path="/Users/tdolan/documents/R-Github/WFmicrosats/DAPC/DAPC_figs")
 
 
 #loop to find the best k at different numbers of PC. 
@@ -170,7 +170,7 @@ pltk %>% ggplot(aes(x=pc_num,y=bestk))+geom_line()+
   xlab("Number of PC retained")+ylab("Number of clusters")+
   ggtitle("Optimal number of clusters as determined by BIC")+
   theme_classic()
-ggsave("yoy16_KvsNPC.png", width=5, height=5, path="/Users/tdolan/documents/R-Github/WFmicrosats/DAPC/DAPC_figs")
+#ggsave("yoy16_KvsNPC.png", width=5, height=5, path="/Users/tdolan/documents/R-Github/WFmicrosats/DAPC/DAPC_figs")
 
 
 #CHOOSE K
@@ -199,8 +199,41 @@ scatter(dapck,grp=grp_BIC$grp, posi.da="none", bg="white", pch=17:22, scree.pca=
 
 
 ################LOADINGS ##### see script "loading_plots.R" for visualizations 
-write.csv(dapck$var.contr,file="./DAPC/DAPC_figs/bay16_loadings_k2.csv")
+ldvar <-dapck$var.contr
 # 
+#rownames(ldvar)<-ldvar[,1]
+
+#summarize loadings
+lds <- ldvar %>% as.data.frame()%>%rownames_to_column(var="Allele")%>%
+  separate(col=Allele, into=c("locus","allele"), sep="[.]",remove=FALSE)%>%mutate(locus=as.factor(locus))
+
+lds.summary <-lds %>%dplyr::group_by(locus)%>%summarize(sum.ld1 = sum(LD1))
+
+lds_baysk2 <-lds
+ldsum_baysk2 <-lds.summary
+
+#ummary results
+btwn_bay_k2 <-c(NA,paste(lds.summary[which.max(lds.summary$sum.ld1),][[1]]),paste(lds.summary[which.max(lds.summary$sum.ld1),][[2]]),paste(mean(lds$LD1)),paste(sd(lds$LD1)),
+                paste(lds.summary[which.min(lds.summary$sum.ld1),][[1]]),paste(lds.summary[which.min(lds.summary$sum.ld1),][[2]]),paste(lds[which.max(lds$LD1),][[1]]),paste(lds[which.max(lds$LD1),][[4]]),
+                NA, NA,NA,NA,NA,NA,NA,NA,NA)
+
+#LOADING PLOTS - diverging alleles between a priori groupings. 
+#we want a loading plot where the top 1% of loadings are shown.
+
+#Axis1
+thresh1 = lds[which.quantile(lds$LD1,0.99),][[4]]
+#what alleles are above the thresh?
+b <-filter(lds, LD1 >= thresh1);b
+althresh1 <-unique(b$Allele)
+
+
+#LOADING PLOT - diverging alleles between a priori groupings. 
+ldvar <-as.data.frame(ldvar)#%>%select(-X)
+set.seed(4)
+#par(mfrow=c(1,2))
+#AXIS 1
+contrib1 <- loadingplot(ldvar, axis=1,
+                        thres=thresh1, lab.jitter=4, main="Axis 1", xlab="Alleles", ylab="DAPC Loadings")
 
 tabs <-table(pop(wfbays16), grp_BIC$grp)
 #CHANGE THE NUMBER

@@ -75,6 +75,11 @@ unique(wfpopLD@pop)
 setPop(og.wfpopLD)<-~Bay/Year/Con
 wfpop.mtshi <-popsub(og.wfpopLD, exclude=c("Mt_2015_1","Mt_2015_2","Mt_2015_5","Mt_2016_5"))
 
+#bartlett test- 
+ho <- c(0.8706,0.9461,0.7875,0.9576,0.8274,0.9509,0.7651,0.9,0.9329,0.9346,0.9493,0.8906,0.7273,0.6287,0.6467,0.6,0.6875)
+he <- c()
+bartlett.test(list(he,ho))
+
 #How many loci out of HWE? - all YOY 2016
 setPop(wfpopLD) <-~Ocean
 hwe.ocean <-hw.test(wfpopLD, B=1000)%>%as.data.frame()%>% 
@@ -835,13 +840,26 @@ for(p in 1:n){
 #ls means doesn't work but tukey hsd does. 
 library("agricolae")
 library("lsmeans")
-anoIR <-lm(IR~pop, na.action=na.omit, data=rel2)
+  #bays
+anoIR <-lm(IR~pop, na.action=na.omit, data=filter(rel2, pop %in% c("Jam","Mor","Mt","Nap","Shin")))
+car::Anova(anoIR)
+#mattituck
+anoIR <-lm(IR~pop, na.action=na.omit, data=filter(rel2, pop %in% c("Mt_2016_1",  "Mt_2016_2",  "Mt_adults_3", "Mt_adults_4")))
 ano2 <-car::Anova(anoIR)
+#shinnecock
+anoIR <-lm(IR~pop, na.action=na.omit, data=filter(rel2, pop %in% c("Shin_2016_1", "Shin_2017_1", "Shin_2016_2","Shin_2017_2")))
+car::Anova(anoIR)
+
+
 ano2
 df<-df.residual(anoIR)
 MSerror<-deviance(anoIR)/df
 comparison <- HSD.test(anoIR,c("pop"),MSerror=MSerror, unbalanced=TRUE,alpha=0.05/6, group=TRUE)
 comparison
+
+#chi square test
+a<-chisq_test(IR~pop, data= bays.ir) 
+a<-friedman.test(IR~pop,data= bays.ir) #Hs - fixing this. 
 
 ## test for significant differences in mean IR for each bay-pair, with t test. Print only the p values. 
 jam <-filter(rel2,pop=="Jam")
@@ -853,46 +871,56 @@ mt <-filter(rel2,pop=="Mt")
 #Nap v. Shin
 #var.test(nap$IR,shin$IR) 
 t <-t.test(nap$IR,shin$IR,var.equal=TRUE)$p.value
-a <-c(t, "Nap","Shin")
+t1 <-t.test(nap$IR,shin$IR,var.equal=TRUE)$statistic
+a <-c(t,t1, "Nap","Shin")
 #nap v. mor
 #var.test(nap$IR,mor$IR)
 t <-t.test(nap$IR,mor$IR,var.equal=FALSE)$p.value
-b <-c(t, "Nap","Mor")
+t1 <-t.test(nap$IR,mor$IR,var.equal=FALSE)$statistic
+b <-c(t, t1, "Nap","Mor")
 #jam v. nap
 #var.test(jam$IR,nap$IR)
 t <-t.test(jam$IR,nap$IR,var.equal=TRUE)$p.value
-c <-c(t, "Jam","Nap")
+t1 <-t.test(jam$IR,nap$IR,var.equal=TRUE)$statistic
+c <-c(t,t1, "Jam","Nap")
 #mor v shin
 #var.test(mor$IR,shin$IR)
 t <-t.test(mor$IR,shin$IR,var.equal=TRUE)$p.value
-d <-c(t, "Mor","Shin")
+t1 <-t.test(mor$IR,shin$IR,var.equal=TRUE)$statistic
+d <-c(t,t1, "Mor","Shin")
 #jam v shin
 #var.test(jam$IR,shin$IR)
 t <-t.test(jam$IR,shin$IR,var.equal=TRUE)$p.value
-e <-c(t, "Jam","Shin")
+t1 <-t.test(jam$IR,shin$IR,var.equal=TRUE)$statistic
+e <-c(t,t1, "Jam","Shin")
 #jam v. mor
 #var.test(jam$IR,mor$IR)
 t <-t.test(jam$IR,mor$IR,var.equal=TRUE)$p.value
-f <-c(t, "Jam","Mor")
+t1 <-t.test(jam$IR,mor$IR,var.equal=TRUE)$statistic
+f <-c(t,t1, "Jam","Mor")
 #jam v. mt
 #var.test(jam$IR,mt$IR)
 t <-t.test(jam$IR,mt$IR,var.equal=TRUE)$p.value
-g <-c(t, "Jam","Mt")
+t1 <-t.test(jam$IR,mt$IR,var.equal=TRUE)$statistic
+g <-c(t,t1, "Jam","Mt")
 #shin v mt
 #var.test(shin$IR,mt$IR)
 t <-t.test(shin$IR,mt$IR,var.equal=TRUE)$p.value
-h <-c(t, "Shin","Mt")
+t1 <-t.test(shin$IR,mt$IR,var.equal=TRUE)$statistic
+h <-c(t,t1, "Shin","Mt")
 #mor v mt
 #var.test(mor$IR,mt$IR)
 t <-t.test(mor$IR,mt$IR,var.equal=TRUE)$p.value
-i <-c(t, "Mor","Mt")
+t1 <-t.test(mor$IR,mt$IR,var.equal=TRUE)$statistic
+i <-c(t,t1, "Mor","Mt")
 #nap v mt
 #var.test(nap$IR,mt$IR)
 t <-t.test(nap$IR,mt$IR,var.equal=TRUE)$p.value
-j <-c(t, "Nap","Mt")
+t1 <-t.test(nap$IR,mt$IR,var.equal=TRUE)$statistic
+j <-c(t,t1, "Nap","Mt")
 
 t <- rbind(a,b,c,d,e,f,g,h,i,j)
-colnames(t) <- c("pr.t", "bay1","bay2")
+colnames(t) <- c("pr.t","tstat", "bay1","bay2")
 t<-as.data.frame(t)
 
 #significant differences between bays. 
@@ -901,7 +929,8 @@ t<-as.data.frame(t)
 
 pairwise.t.test(rel2$IR, rel2$name) #idk if this is right, but let's automate the t tests. 
 t<-mutate(t,pr.t=as.numeric(as.character(pr.t)))%>% mutate(p_value = cut(pr.t, breaks=c(0,0.005, 0.01,0.05,0.1,0.5,1)), significance=ifelse(pr.t < 0.005, "sig","not.sig"))
-t<- arrange(t, bay1) %>% mutate(bay1=as.character(bay1), bay2=as.character(bay2)) %>%mutate(pair1 = pmin(bay1,bay2), pair2 =pmax(bay1,bay2)) %>% arrange(pair1)
+t<- arrange(t, bay1) %>% mutate(bay1=as.character(bay1), bay2=as.character(bay2)) %>%mutate(pair1 = pmin(bay1,bay2), pair2 =pmax(bay1,bay2)) %>% arrange(pair1)%>%
+  mutate(padj=p.adjust(pr.t,method="BH"))%>%mutate(across(c("pr.t","tstat","padj"),round,4))
 
 write.csv(t,"./diversity_stats/diversity_output_files/YOY16_bay/IR_ttests.csv")
 
@@ -961,7 +990,7 @@ library("MASS")
 dens <- kde2d(Dgeo2,Dgen, n=300)
 myPal <- colorRampPalette(c("white","blue","gold", "orange", "red"))
 jpeg(file="./diversity_stats/diversity_figs/bay/IBDbysea.jpeg")
-plot(Dgeo2, Dgen, xlab="distance (KM)", ylim= c(0.12, 0.35),ylab="genetic distance (euclidean)")
+plot(Dgeo2, Dgen, xlab="distance (KM)", ylim= c(0.22, 0.35),ylab="genetic distance (euclidean)")
 image(dens, col=transp(myPal(500),0.4), add=TRUE)
 abline(lm(Dgen~Dgeo2))
 dev.off()
@@ -970,4 +999,17 @@ library("car")
 Anova(lm(Dgen~Dgeo2))
 summary(lm(Dgen~Dgeo2))
 
+#some kind of issue with lm and a matrix because this is WEIRD. 
+#convert Dgen
+df = as.data.frame(as.matrix(Dgen))
+df = df[complete.cases(df),]
+df[df[,3]!=0,]
+df.gen <-data.frame(t(combn(names(df),2)), dist.gen=t(df)[lower.tri(df)] )
+#convert Dgeo
+df = as.data.frame(as.matrix(Dgeo2))
+df = df[complete.cases(df),]
+df[df[,3]!=0,]
+df.geo <-data.frame(t(combn(names(df),2)), dist.geo=t(df)[lower.tri(df)] )
+#combine them
+df <-full_join(df.gen,df.geo)
 

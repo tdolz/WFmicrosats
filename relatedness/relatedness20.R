@@ -221,8 +221,11 @@ relatedCI <- relatedness_triad$relatedness.ci95 %>%
 relatedT <-left_join(relatedT, relatedCI)
 
 library("readr")
-write_delim(relatedT, "pairwise_relatedness_trioml")
+#write_delim(relatedT, "pairwise_relatedness_trioml")
+write_delim(relatedT, "pairwise_relatedness_trioml_mar2024.txt")
+#### since package RELATED is no longer available, try loading the previous data here
 
+#relatedT <-read.delim("/Users/tdolan/Documents/R-Github/WFmicrosats/relatedness/pairwise_relatedness_trioml", header=T, sep=" ")
 
 # relatedness (TRIOML)- remember to change these values depending on what dataset you are using. 
 relatedT %>%
@@ -268,7 +271,23 @@ hs <-filter(hs,!is.na(Bay1))
 hs <-mutate(hs, pair1 = pmin(Bay1,Bay2), pair2 =pmax(Bay1,Bay2)) %>% 
   unite(BayPair, pair1,pair2, sep="-", remove=TRUE) %>% unique() 
 hs <-unite(hs, BayYear1, Bay1, Year1, sep="_", remove=FALSE) %>% unite(BayYear2, Bay2, Year2, sep="_", remove=FALSE)
-hs <-mutate_at(hs, vars(Pop.x, Bay1,ConYear1,Year1,BayYear1, BayYear2, Pop.y, Bay2, ConYear2, Year2), funs(as.factor(.)))
+hs <-hs %>%mutate(across(c(Pop.x,Bay1,ConYear1,Year1,BayYear1, BayYear2, Pop.y, Bay2, ConYear2, Year2), as.factor))
+
+#get rid of individuals where the high value is 1
+hs <-filter(hs, Relatedness_Value < 0.9)
+                  
+#let's look at YOY only but all years. 
+#hs <-filter(hs, Pop.x %in% c("Atl_Jam_6_2016","Atl_Mor_6_2016","Atl_Mt_1_2015","Atl_Mt_1_2016","Atl_Mt_2_2015","Atl_Mt_2_2016",
+   #                             "Atl_Nap_6_2016","Atl_Shin_1_2016","Atl_Shin_1_2017","Atl_Shin_2_2016","Atl_Shin_2_2017"))%>%
+  #filter(Pop.y %in% c("Atl_Jam_6_2016","Atl_Mor_6_2016","Atl_Mt_1_2015","Atl_Mt_1_2016","Atl_Mt_2_2015","Atl_Mt_2_2016",
+   #                  "Atl_Nap_6_2016","Atl_Shin_1_2016","Atl_Shin_1_2017","Atl_Shin_2_2016","Atl_Shin_2_2017"))
+
+#let's look at YOY 2016 
+#hs <-filter(hs, Pop.x %in% c("Atl_Jam_6_2016","Atl_Mor_6_2016","Atl_Mt_1_2016","Atl_Mt_2_2016",
+#                             "Atl_Nap_6_2016","Atl_Shin_1_2016","Atl_Shin_2_2016"))%>%
+ # filter(Pop.y %in% c("Atl_Jam_6_2016","Atl_Mor_6_2016","Atl_Mt_1_2016","Atl_Mt_2_2016",
+#                      "Atl_Nap_6_2016","Atl_Shin_1_2016","Atl_Shin_2_2016"))
+
 
 same.bay <-filter(hs, Bay1==Bay2)
 diff.bay <-filter(hs, Bay1!=Bay2)
@@ -300,6 +319,7 @@ same.year %>%
   #geom_boxplot(outlier.colour = NA, position = dodge)+ 
   ggplot2::stat_summary(fun.data = mean_sdl,fun.args = list(mult = 1),geom = "pointrange",position = ggplot2::position_nudge(x = 0.05, y = 0)) +
   geom_flat_violin(aes(fill=GRP),position = position_nudge(x = .1, y = 0),adjust=2, trim = FALSE)+
+  #geom_violin(aes(fill=GRP),position = position_nudge(x = .1, y = 0),adjust=2, trim = FALSE)+
   scale_fill_manual(name = "GRP",values = yearcols)+
   scale_color_manual(name = "GRP",values = yearcols)+
   geom_hline(aes(yintercept = halfsibs), color = "black", linetype = "dotted", size = 0.7) + #the estimated mean value for half sibs in the simulation
@@ -308,23 +328,49 @@ same.year %>%
   #facet_wrap(~level, scales="free")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('sameyearboxJitter.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
+#ggsave('sameyearboxJitter.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
+ggsave('sameyearboxJitter.png', path="/Users/tdolan/Documents/R-Github/WFmicrosats/relatedness", width = 7, height = 7)
+
+
+#diff bays
+anorel <-lm(Relatedness_Value~BayPair, na.action=na.omit, data=diff.bay)
+ano2 <-car::Anova(anorel)
+ano2
+ano3<-df.residual(anorel)
+MSerror<-deviance(anorel)/ano3
+comparison <- HSD.test(anorel,c("BayPair"),MSerror=MSerror, unbalanced=TRUE,alpha=0.05/10, group=TRUE)
+comparison
+
+comparison$groups
+
+#the cheating way to do this is to just give them all the same color... 
+
+btw_bay_cols  <-c("Mor-Shin"="#332288",
+                  "Mor-Mt"="#88CCEE","Mor-Nap"="#88CCEE","Nap-Shin"="#88CCEE","Jam-Mor"="#88CCEE","Mt-Shin"="#88CCEE",
+                  "Jam-Nap"="#44AA99","Mt-Nap"="#44AA99","Jam-Shin"="#44AA99","Jam-Mt"="#44AA99")
+
 
 ##violin plot of diff bay pairs
 diff.bay %>%
   ggplot(aes(x=fct_rev(BayPair),y=Relatedness_Value))+ # bay pairs
-  geom_point(aes(colour = "BayPair"), position = position_jitterdodge(dodge.width = 0.9), alpha = 0.8) +
+  geom_point(aes(color= BayPair), position = position_jitterdodge(dodge.width = 0.9), alpha = 0.8) +
   #geom_boxplot(fill="light grey")+ 
   ggplot2::stat_summary(fun.data = mean_sdl,fun.args = list(mult = 1),geom = "pointrange",position = ggplot2::position_nudge(x = 0.05, y = 0))+
-  geom_flat_violin(aes(fill="light grey"),fill="light grey",position = position_nudge(x = .1, y = 0),adjust=2, trim = FALSE)+
+  geom_flat_violin(aes(fill = BayPair),position = position_nudge(x = .1, y = 0),adjust=2, trim = FALSE)+
+  #geom_flat_violin(aes(fill="light grey"),fill="light grey",position = position_nudge(x = .1, y = 0),adjust=2, trim = FALSE)+
   coord_flip()+ 
-  scale_color_manual(name = "BayPair", values = c(rep("light grey",10)))+
+  #scale_color_manual(name = "BayPair", values = c(rep("light grey",10)))+
+  scale_fill_manual(name = "BayPair", values = btw_bay_cols)+
+  scale_color_manual(name = "BayPair", values = btw_bay_cols)+
   geom_hline(aes(yintercept = halfsibs), color = "black", linetype = "dotted", size = 0.7) + #the estimated mean value for half sibs in the simulation
   geom_hline(aes(yintercept = fullsibs), color = "black", linetype = "dashed", size = 0.5) + #the estimated mean value for full sibs in the simulation
   xlab(' ')+ylab("Pairwise Relatedness")+
   theme(axis.text = element_text(size = 20),axis.title = element_text(size = 20),panel.background = element_rect(fill = 'white', colour = 'black'),
         panel.grid.major = element_line(colour = "white"),plot.margin=margin(0.5,1,0.5,0.5,"cm"))+guides(fill = FALSE, colour = FALSE) 
-ggsave('diffbayjitter.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
+#ggsave('diffbayjitter.png', path="/Users/tdolan/Documents/WIP research/microsats/microsat_figs", width = 7, height = 7)
+ggsave('diffbayjitter_colors.png', path="/Users/tdolan/Documents/R-Github/WFmicrosats/relatedness", width = 7, height = 7)
+
+
 
 ### diff conyears
 diff.CY <-filter(same.bay, Pop.x!=Pop.y) %>% unite(CYpair, ConYear1, ConYear2, sep="-", remove=FALSE)
@@ -401,14 +447,9 @@ comparison
 
 ddply(same.bay, Bay1~Year1, summarize, averel=mean(Relatedness_Value),serel=sem(Relatedness_Value))
 
-#diff bays
-anorel <-lm(Relatedness_Value~BayPair, na.action=na.omit, data=diff.bay)
-ano2 <-car::Anova(anorel)
-ano2
-ano3<-df.residual(anorel)
-MSerror<-deviance(anorel)/ano3
-comparison <- HSD.test(anorel,c("BayPair"),MSerror=MSerror, unbalanced=TRUE,alpha=0.05/10, group=TRUE)
-comparison
+
+ddply(same.bay, Bay1~Year1, summarize, averel=mean(Relatedness_Value),serel=sem(Relatedness_Value))
+
 
 #Mattituck
 hs2 <-filter(hs, Bay1=="Mt" & Bay2=="Mt")
@@ -435,6 +476,15 @@ filter(hs2, trioml.low > halfsibs) %>%n_distinct()
 #how many individuals significantly exceed the full sibling mean?
 filter(hs2, trioml.low > fullsibs) %>%n_distinct()
 
+#how many individuals in Mt SIGNIFICANTLY exceed the half sibling threshold?
+filter(hs2, Relatedness_Value > halfsibs) %>%n_distinct()
+#how many individuals significantly exceed the full sibling mean?
+filter(hs2, Relatedness_Value >= fullsibs) %>%n_distinct()
+
+filter(hs2, Relatedness_Value >= parentoffspring) %>%n_distinct()
+filter(hs2, trioml.low >= parentoffspring) %>%n_distinct()
+
+
 #Bay pairs sig diffs. 
 hs2 <-unite(hs2, ConPair, ConYear1, ConYear2, sep="-", remove=FALSE)
 anorel <-lm(Relatedness_Value~ConPair, na.action=na.omit, data=hs2)
@@ -456,7 +506,7 @@ cy2 <- fct_recode(sum_rel$ConYear2, c("1_2015","2_2015", "1_2016","2_2016","3_ad
 
 ggplot(sum_rel, aes(cy1, cy2, label= AS))+ #switch between AS and percentsib
   geom_tile(aes(fill=avr), show.legend = TRUE)+
-  scale_fill_viridis(option="A", direction = -1)+  #A is magma, D is regular viridis
+ # scale_fill_viridis(option="A", direction = -1)+  #A is magma, D is regular viridis
   #scale_fill_gradient(low ="#ffeda0" , high = "#800026")+ #warm colors
   #scale_fill_gradient(low ="#023858" , high = "#ece7f2")+ #cool colors
    geom_text(color="white", size=6)+
