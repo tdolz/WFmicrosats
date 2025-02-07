@@ -1,19 +1,5 @@
 # WFmicrosats
-microsatellite study of winter flounder from the Saltonstall-Kennedy grant 2016-2017
-
-
-**Questions/Notes 5/30/23**
-- Do bays have significantly different diversity and inbreeding etc? - This tells us about imperiled populations. Do bays with multiple cohorts have more or less diveristy? You still do the rareifaction for this. It's just a follow on qualitative question with the previous. 
-
-- Is there genetic structure between bays? This is the pairwise FST analysis between bays (rarified). 
-
-- Is there genetic structure WITHIN bays? I think this is the cohort questions only, as shannon says, not useful to bring in the Mt adults here. Use FST to look into this. factorial design, years X cohorts. 
-
-- I think we need to reframe the paper around diversity, population size and bet hedging and only slightly go into partial migration and the origins of it. The migration piece here is more about straying. I don't think we need to super get into migrant & resident adults in mattituck. Whether migration is genetically based is better answered by the rad-seq paper. 
-
-- 
-
-- 
+microsatellite study of winter flounder from the Saltonstall-Kennedy grant 2016-2017. Code used in development of "Patterns of persistence: Genetic and behavioral population complexity of winter flounder amid population declines" https://onlinelibrary.wiley.com/doi/10.1111/jfb.15890 This code is not very organized but please feel free to reach out if you have any questions! Tara.Dolan@mass.gov
 
 **Code organization**
 ****
